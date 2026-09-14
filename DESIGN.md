@@ -60,11 +60,11 @@ Nine rooms, three by three. The intended route, and the optional ones:
 ```
 [ A the key nook ][ B the crowd  ][ C the pit gallery (charm) ]
 [ D the Digger   ][ E the hub    ][ F the archers' vein        ]
-[ G the mounds   ][ H the throat ][ I THE OLD BROCK            ]
+[ G the mounds   ][ H the throat ][ I THE GOBLIN SHAMAN        ]
 ```
 
 H (in from the wood, rocks fall at marked spots) → E → B (sealed crowd) → A (key, wardens) → E → D (locked;
-THE DIGGER; drops THE CLAW) → F (the plug into I is soft earth: dig it) → I (THE OLD BROCK; KEEPING; the way
+THE DIGGER; drops THE CLAW) → F (the plug into I is soft earth: dig it) → I (THE GOBLIN SHAMAN; KEEPING; the way
 out). Optional: C (pits + archers, THORNBAND charm), G (soft earth, buried loot — needs the claw).
 
 ## Ports and process

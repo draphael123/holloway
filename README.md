@@ -13,7 +13,7 @@ takes, and what you take from the wood, you keep.*
 
 | | verb from the named creature | boss and its keeping | rule |
 |---|---|---|---|
-| THE WARREN (under the roots) | THE DIGGER → THE CLAW (dig soft earth) | THE OLD BROCK | rocks fall on marked spots |
+| THE WARREN (under the roots) | THE DIGGER → THE CLAW (dig soft earth) | THE GOBLIN SHAMAN (bolts, blinks, red unblockable hexes) | rocks fall on marked spots |
 | THE MERE (under the stream, through the culvert grate) | THE EELWIFE → THE LUNGS (swim deep water, no sword in it) | THE OLD PIKE, fought from the land | spouts, and water that is a wall until you have lungs |
 
 THE PEDLAR by the road sells a heal, a permanent heart, and charms. Gold comes from what you kill and dig up.

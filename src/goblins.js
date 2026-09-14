@@ -33,6 +33,7 @@ export const SLINGER = { skin: '#6a7a3a', rag: '#4a4a5a', weapon: 'sling', hood:
 export const SHIELDBEARER = { skin: '#4a7a3a', rag: '#3a3a44', weapon: 'shield' };
 export const BOG = { skin: '#3a7a6a', rag: '#2a4a3a', weapon: 'spear' };
 export const DROWNED = { skin: '#8aa0a8', rag: '#3a4a5a', weapon: 'grab', weed: true };
+export const SHAMAN = { skin: '#4a8a5a', rag: '#5a2a6a', weapon: 'staff', hood: '#2a1a3a', big: true, feathers: true };
 
 const STEEL = '#d8dce6', STEEL_D = '#8a8e9a', WOOD = '#7a5230', WOOD_L = '#a6733f', REED = '#6a8a3a', BOSS = '#9a9aa8', STONE = '#8a8a90';
 const lean = (fr, f) => { const d = fr === 2 ? -2 : fr === 3 ? 3 : 0; return f === 'down' ? [0, d] : f === 'up' ? [0, -d] : [d, 0]; };
@@ -62,6 +63,9 @@ export function bakeGoblin(v) {
       if (v.small) { /* the whelp is the same body, drawn a touch lower: it is a child */ }
       // weapons in front
       const hx = f === 'side' ? ox + 13 : f === 'down' ? ox + 12 : ox + 3, hy = oy + 13;
+      if (v.feathers) { for (let i = 0; i < 3; i++) line(g, ox + 5 + i * 3, oy + 1, ox + 4 + i * 3 - (i === 0 ? 2 : 0), oy - 5 - (i & 1) * 2, i === 1 ? '#c9452e' : '#e0bb65', 1); }
+      if (v.weapon === 'staff' && f !== 'up') { const sx2 = f === 'side' ? hx + 2 : ox + 14; line(g, sx2, hy + 7, sx2, hy - 10, WOOD, 2); circle(g, sx2, hy - 12, 2.5, '#e6dcc4'); px(g, sx2 - 1, hy - 12, '#1b1626'); px(g, sx2 + 1, hy - 12, '#1b1626'); if (fr === 2 || fr === 3) { circle(g, sx2, hy - 16, fr === 3 ? 3 : 2, '#6af06a'); px(g, sx2, hy - 16, '#e6ffe6'); } }
+      if (v.weapon === 'staff' && f === 'up') { line(g, ox + 2, hy + 7, ox + 2, hy - 10, WOOD, 2); circle(g, ox + 2, hy - 12, 2.5, '#e6dcc4'); }
       if (v.weapon === 'dagger' && f !== 'up') { const ext = fr === 3 ? 4 : fr === 2 ? -2 : 0; if (f === 'side') { line(g, hx, hy, hx + 5 + ext, hy - 1, STEEL, 2); px(g, hx + 5 + ext, hy - 2, STEEL); rect(g, hx - 1, hy - 1, 2, 3, WOOD); } else { line(g, hx, hy, hx + 2, hy + 5 + ext, STEEL, 2); rect(g, hx - 1, hy - 2, 3, 2, WOOD); } }
       if (v.weapon === 'stick' && f !== 'up') { const ext = fr === 3 ? 4 : fr === 2 ? -2 : 0; if (f === 'side') { line(g, hx - 1, hy + 1, hx + 4 + ext, hy - 3, WOOD, 2); circle(g, hx + 4 + ext, hy - 3, 1.6, WOOD_L); } else { line(g, hx, hy - 1, hx + 1, hy + 4 + ext, WOOD, 2); circle(g, hx + 1, hy + 4 + ext, 1.6, WOOD_L); } }
       if (v.weapon === 'sling' && f !== 'up') { const sx = f === 'side' ? hx + 1 : hx; if (fr === 2) { line(g, sx, hy, sx + 5, hy - 8, WOOD_L, 1); circle(g, sx + 5, hy - 8, 1.6, STONE); } else if (fr === 3) { line(g, sx, hy, sx + 7, hy - 2, WOOD_L, 1); } else { line(g, sx, hy, sx + 2, hy + 5, WOOD_L, 1); circle(g, sx + 2, hy + 5, 1.6, STONE); } }
@@ -72,6 +76,7 @@ export function bakeGoblin(v) {
       return { canvas: c, ax: cx, ay: base };
     });
   }
+  if (v.big) for (const f of ['down', 'up', 'side']) out[f] = out[f].map(fr => { const [c2, g2] = canvas(fr.canvas.width * 2, fr.canvas.height * 2); g2.imageSmoothingEnabled = false; g2.drawImage(fr.canvas, 0, 0, c2.width, c2.height); return { canvas: c2, ax: fr.ax * 2, ay: fr.ay * 2 }; });
   out.right = out.side; out.left = out.side.map(f => ({ ...f, canvas: flipX(f.canvas) })); delete out.side;
   return out;
 }

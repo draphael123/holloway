@@ -4,7 +4,7 @@
 // the boss room holds exactly one boss; chest/mound tables match their cells; every enemy id is defined.
 import { AREAS, parseArea, roomDoors, K, SOLID, CELL_W, CELL_H } from '../src/world.js';
 
-const ENEMY_IDS = ['imp', 'rat', 'archer', 'warden', 'digger', 'brock', 'newt', 'drowned', 'eelwife', 'pike'];
+const ENEMY_IDS = ['imp', 'rat', 'archer', 'warden', 'digger', 'brock', 'shaman', 'newt', 'drowned', 'eelwife', 'pike'];
 let fails = 0, warns = 0;
 const fail = s => { fails++; console.log('  FAIL ' + s); };
 const warn = s => { warns++; console.log('  warn ' + s); };

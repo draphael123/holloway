@@ -80,6 +80,7 @@ export const CAVE = {
   water: f => cell('cave', 5 + (f & 3), 7),
   // George Bailey's cave (CC-BY 4.0): a brown speckled floor, rocks, plants, mushrooms, crystals
   floorGB: i => cell('gb', 1 + (i & 1), 12 + ((i >> 1) & 1)),
+  idol: i => cell('cave', 6 + (i & 3), 0, 1, 3),
   rockGB: i => propClean('gb', i % 3, 18, 1, 2, 8, 30),
   plantGB: i => propClean('gb', 4 + (i & 1), 18, 1, 2, 8, 30),
   mushroomGB: i => propClean('gb', 7 + (i & 3), 18, 1, 2, 8, 30),

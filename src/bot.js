@@ -58,7 +58,7 @@ export async function runBot(HW, opts = {}) {
       if (!e) { step(5); frames += 5; continue; }
       const dx = e.x - P.x, dy = e.y - (P.y - 4), d = Math.hypot(dx, dy);
       if (P.swim) { const land = nearestLand(); if (land) { holdDir(land[0] * TS + 8 - P.x, land[1] * TS + 9 - P.y); step(1); frames++; continue; } }
-      const danger = es.some(x => x.state === 'tell' && x.tellT < 0.22 && Math.hypot(x.x - P.x, x.y - P.y) < 50) || es.some(x => x.state === 'charge' && Math.hypot(x.x - P.x, x.y - P.y) < 70) || es.some(x => x.state === 'mark' && x.mark && Math.hypot(x.mark.x - P.x, x.mark.y - P.y) < 30);
+      const danger = es.some(x => x.state === 'tell' && x.tellT < 0.22 && Math.hypot(x.x - P.x, x.y - P.y) < 50) || es.some(x => x.state === 'charge' && Math.hypot(x.x - P.x, x.y - P.y) < 70) || es.some(x => x.mark && Math.hypot(x.mark.x - P.x, x.mark.y - P.y) < 34) || (window.HW.shocks || []).some(s => Math.abs(Math.hypot(s.x - P.x, s.y - P.y) - s.r) < 40);
       const rockDanger = (window.HW.rocks || []).some(r => !r.done && r.t > r.mark - 0.3 && Math.hypot(r.x - P.x, r.y - P.y) < 22);
       if ((danger || rockDanger) && P.roll <= 0) {
         if (P.st > 25) { const a = Math.atan2(dy, dx) + Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1); holdDir(Math.cos(a), Math.sin(a)); await tap('KeyZ', 2); step(14); frames += 17; stop(); continue; }

@@ -20,22 +20,23 @@ export const TS = 16;
 export const CELL_W = 20, CELL_H = 11;
 
 export const K = { WALL: 1, FLOOR: 2, SOFT: 3, MOUND: 4, PIT: 5, GRASS: 6, DIRT: 7, TREE: 8, WATER: 9, PLANK: 10, HOUSE: 11, ROCK: 12, BRAZIER: 13, MOUTH: 14, STAIRS: 15, DEEP: 16, CULVERT: 17,
-  FLOWERS: 18, MOSS: 19, FENCE: 20, CLIFF: 21, STUMP: 22, BUSH: 23, STAL: 24, CRATE: 25, LAMP: 26, POT: 27 };
+  FLOWERS: 18, MOSS: 19, FENCE: 20, CLIFF: 21, STUMP: 22, BUSH: 23, STAL: 24, CRATE: 25, LAMP: 26, POT: 27, DECOR: 28 };
 export const BREAKABLE = new Set([25, 27]);
-export const SOLID = new Set([K.WALL, K.SOFT, K.MOUND, K.TREE, K.WATER, K.HOUSE, K.ROCK, K.BRAZIER, K.DEEP, K.FENCE, K.CLIFF, K.STUMP, K.BUSH, K.STAL, K.CRATE, K.LAMP, K.POT]);
+export const SOLID = new Set([K.WALL, K.SOFT, K.MOUND, K.TREE, K.WATER, K.HOUSE, K.ROCK, K.BRAZIER, K.DEEP, K.FENCE, K.CLIFF, K.STUMP, K.BUSH, K.STAL, K.CRATE, K.LAMP, K.POT, K.DECOR]);
 // what the ground is under a prop, for drawing
 export const GRASSY = new Set([K.GRASS, K.FLOWERS, K.TREE, K.HOUSE, K.ROCK, K.MOUTH, K.FENCE, K.CLIFF, K.STUMP, K.BUSH, K.LAMP]);
 export const SWIMMABLE = new Set([K.DEEP]);
 export const DIGGABLE = new Set([K.SOFT, K.MOUND]);
 
-const ENEMY_CH = { i: 'imp', t: 'rat', a: 'archer', w: 'warden', M: 'digger', B: 'brock', n: 'newt', d: 'drowned', E: 'eelwife', Q: 'pike' };
+const ENEMY_CH = { i: 'imp', t: 'rat', a: 'archer', w: 'warden', M: 'digger', B: 'shaman', n: 'newt', d: 'drowned', E: 'eelwife', Q: 'pike' };
+// Y = a WAYSTONE: touch it and it is where you come back to. Each room may carry `decor` (landmarks) and a `tint`.
 
 // ---------------------------------------------------------------------------------------------
 // THE WARREN — nine rooms, three by three. Row-major: A B C / D E F / G H I.
 // Door cells: north/south at columns 9-10, east/west at rows 4-5. A '%' on a door position is a plug.
 // ---------------------------------------------------------------------------------------------
 const WARREN_ROOMS = {
-  A: { name: 'THE KEY NOOK', rows: [
+  A: { name: 'THE KEY NOOK', tint: 'rgba(70,45,20,0.22)', decor: [{ sub: 'cage', x: 15, y: 2 }, { sub: 'skulls', x: 3, y: 8 }], rows: [
     '####################',
     '#..r...............#',
     '#......s.....w.....#',
@@ -48,7 +49,7 @@ const WARREN_ROOMS = {
     '#.........s........#',
     '####################',
   ] },
-  B: { name: 'THE CROWD', rows: [
+  B: { name: 'THE CROWD', decor: [{ sub: 'banner', x: 2, y: 1 }, { sub: 'banner', x: 17, y: 1 }], rows: [
     '####################',
     '#.......r..........#',
     '#..t.........i.....#',
@@ -61,7 +62,7 @@ const WARREN_ROOMS = {
     '#..................#',
     '#########..#########',
   ] },
-  C: { name: 'THE PIT GALLERY', rows: [
+  C: { name: 'THE PIT GALLERY', tint: 'rgba(10,20,60,0.3)', decor: [{ sub: 'skulls', x: 2, y: 9 }], rows: [
     '####################',
     '#.............OOOO.#',
     '#..OOOOO..a...O..c.#',
@@ -74,20 +75,20 @@ const WARREN_ROOMS = {
     '#..................#',
     '####################',
   ] },
-  D: { name: 'THE DIGGER\'S HALL', rows: [
+  D: { name: 'THE DIGGER\'S HALL', tint: 'rgba(50,35,10,0.2)', decor: [{ sub: 'totem', x: 16, y: 2 }], rows: [
     '####################',
     '#%%................#',
     '#%..........s......#',
     '#...........r......#',
     '#.........M.........',
-    '#...................',
+    '#...............Y...',
     '#......r...........#',
     '#..s..........%%%..#',
     '#.............%*%..#',
     '#%%...........%%%..#',
     '####################',
   ] },
-  E: { name: 'THE HUB', rows: [
+  E: { name: 'THE HUB', decor: [{ sub: 'idol', x: 7, y: 1 }, { sub: 'idol', x: 12, y: 1 }], rows: [
     '#########..#########',
     '#....s.............#',
     '#...b..........b...#',
@@ -100,7 +101,7 @@ const WARREN_ROOMS = {
     '#..................#',
     '#########..#########',
   ] },
-  F: { name: 'THE ARCHERS\' VEIN', rows: [
+  F: { name: 'THE ARCHERS\' VEIN', tint: 'rgba(80,60,10,0.18)', decor: [{ sub: 'totem', x: 2, y: 1 }], rows: [
     '####################',
     '#.......a..........#',
     '#..r.......%%%.....#',
@@ -126,7 +127,7 @@ const WARREN_ROOMS = {
     '#%%%%%%%%%%%%%%%%%%#',
     '####################',
   ] },
-  H: { name: 'THE THROAT', rows: [
+  H: { name: 'THE THROAT', decor: [{ sub: 'skulls', x: 16, y: 1 }], rows: [
     '#########..#########',
     '#......s...........#',
     '#..!......!....r...#',
@@ -136,10 +137,10 @@ const WARREN_ROOMS = {
     '#.......s..........#',
     '#..r.....!.....s...#',
     '#..........!.......#',
-    '#.........@........#',
+    '#.........@..Y.....#',
     '#########..#########',
   ] },
-  I: { name: 'THE OLD BROCK', rows: [
+  I: { name: 'THE SHAMAN\'S HOLE', tint: 'rgba(60,10,60,0.24)', decor: [{ sub: 'totem', x: 3, y: 2 }, { sub: 'totem', x: 16, y: 2 }, { sub: 'banner', x: 6, y: 1 }, { sub: 'banner', x: 13, y: 1 }, { sub: 'skulls', x: 4, y: 8 }], rows: [
     '#########..#########',
     '#..................#',
     '#..s...............#',
@@ -159,7 +160,7 @@ const WARREN_ROOMS = {
 // Same grid: A B C / D E F / G H I. The plug into the Pike's pool is water, not earth.
 // ---------------------------------------------------------------------------------------------
 const MERE_ROOMS = {
-  A: { name: 'THE WEIR', rows: [
+  A: { name: 'THE WEIR', decor: [{ sub: 'cage', x: 16, y: 2 }], rows: [
     '####################',
     '#..~~..............#',
     '#..~~....d.........#',
@@ -172,7 +173,7 @@ const MERE_ROOMS = {
     '#......~~..........#',
     '####################',
   ] },
-  B: { name: 'THE SHALLOWS', rows: [
+  B: { name: 'THE SHALLOWS', decor: [{ sub: 'banner', x: 2, y: 1 }, { sub: 'banner', x: 17, y: 1 }], rows: [
     '####################',
     '#..................#',
     '#..n...~~~~...n....#',
@@ -185,7 +186,7 @@ const MERE_ROOMS = {
     '#..................#',
     '#########..#########',
   ] },
-  C: { name: 'THE DROWNED CHAPEL', rows: [
+  C: { name: 'THE DROWNED CHAPEL', tint: 'rgba(10,30,80,0.28)', decor: [{ sub: 'idol', x: 7, y: 1 }, { sub: 'idol', x: 12, y: 1 }], rows: [
     '####################',
     '#..................#',
     '#....~~~~~~~~~~....#',
@@ -198,20 +199,20 @@ const MERE_ROOMS = {
     '#..................#',
     '####################',
   ] },
-  D: { name: 'THE EELWIFE\'S POOL', rows: [
+  D: { name: 'THE EELWIFE\'S POOL', tint: 'rgba(20,50,50,0.2)', decor: [{ sub: 'totem', x: 16, y: 2 }], rows: [
     '####################',
     '#~~~~..............#',
     '#~~~~..............#',
     '#~~~~..............#',
     '#~~~~.....E.........',
-    '#~~~~...............',
+    '#~~~~...........Y...',
     '#~~~~..............#',
     '#~~~~..........~~..#',
     '#~~~~..........~~..#',
     '#~~~~..........~~..#',
     '####################',
   ] },
-  E: { name: 'THE CISTERN', rows: [
+  E: { name: 'THE CISTERN', decor: [{ sub: 'idol', x: 7, y: 1 }, { sub: 'idol', x: 12, y: 1 }], rows: [
     '#########..#########',
     '#....s.............#',
     '#...b.....~~...b...#',
@@ -224,7 +225,7 @@ const MERE_ROOMS = {
     '#..................#',
     '#########..#########',
   ] },
-  F: { name: 'THE SLUICE', rows: [
+  F: { name: 'THE SLUICE', tint: 'rgba(60,60,20,0.16)', decor: [{ sub: 'totem', x: 2, y: 1 }], rows: [
     '####################',
     '#.......a..........#',
     '#..r...............#',
@@ -250,7 +251,7 @@ const MERE_ROOMS = {
     '#%%%%%%%%%%%%%%%%%%#',
     '####################',
   ] },
-  H: { name: 'THE CULVERT', rows: [
+  H: { name: 'THE CULVERT', decor: [{ sub: 'skulls', x: 16, y: 1 }], rows: [
     '#########..#########',
     '#......s...........#',
     '#..!...~~~!........#',
@@ -260,10 +261,10 @@ const MERE_ROOMS = {
     '#......~~..........#',
     '#..r...~~!.....s...#',
     '#......~~..!.......#',
-    '#......~~.@........#',
+    '#......~~.@..Y.....#',
     '#########..#########',
   ] },
-  I: { name: 'THE OLD PIKE', rows: [
+  I: { name: 'THE OLD PIKE', tint: 'rgba(10,40,90,0.3)', rows: [
     '#########..#########',
     '#~~~~~~~~..~~~~~~~~#',
     '#~................~#',
@@ -338,9 +339,9 @@ export const AREAS = {
     rooms: WARREN_ROOMS, chests: WARREN_CHESTS, mounds: WARREN_MOUNDS, signs: WARREN_SIGNS,
     // the door out of H's south wall leads back to the wood, standing under the mouth
     exits: { 'H:s': { to: 'wood', at: 'mouth' } },
-    boss: 'brock', mini: 'digger', keeping: 'THE BROCK\'S HEART', verb: 'dig', hazard: 'rock',
+    boss: 'shaman', mini: 'digger', keeping: 'THE SHAMAN\'S HEART', verb: 'dig', hazard: 'rock',
     waves: { B: [['rat', 'rat', 'imp']], F: [['imp', 'imp']] },
-    won: { title: 'THE WARREN IS DONE', lines: ['The Pell boy was in the Brock\'s chamber, under a heap of what the wood had kept: lanterns, a goat bell, a warden\'s cap.', 'He would not say what he saw. You carry him up the throat and out into the light.', 'You kept THE CLAW. You kept THE BROCK\'S HEART. That is the law.'] },
+    won: { title: 'THE WARREN IS DONE', lines: ['The Pell boy was in the shaman\'s hole, under a heap of what the tribe had kept: lanterns, a goat bell, a warden\'s cap.', 'He would not say what he saw. You carry him up the throat and out into the light.', 'You kept THE CLAW. You kept THE SHAMAN\'S HEART. That is the law.'] },
     // the intended route, for the bot and the audit's staged reachability
     route: [
       { room: 'H', do: 'clear' }, { room: 'E', do: 'clear' }, { room: 'B', do: 'clear' }, { room: 'A', do: 'clear' }, { room: 'A', do: 'chest' },
@@ -405,6 +406,7 @@ export function parseArea(a) {
     else if (ch === '@') ents.push({ kind: 'start', x, y, room: rid });
     else if (ch === '!') ents.push({ kind: 'dripspot', x, y, room: rid });
     else if (ch === 'D') ents.push({ kind: 'mouth', x, y, room: rid });
+    else if (ch === 'Y') ents.push({ kind: 'waystone', x, y, room: rid });
     else if (ch === 'V') ents.push({ kind: 'culvert', x, y, room: rid });
     else if (DECO_CH[ch]) ents.push({ kind: 'deco', sub: DECO_CH[ch], x, y, room: rid });
     else if (/[1-9]/.test(ch)) { const def = (a.npcs || []).find(n => n.idx === +ch); if (def) ents.push({ kind: 'npc', x, y, room: rid, def }); }
@@ -414,7 +416,8 @@ export function parseArea(a) {
   if (a.kind === 'holloway') {
     for (let gy = 0; gy < a.grid.length; gy++) for (let gx = 0; gx < a.grid[gy].length; gx++) {
       const id = a.grid[gy][gx];
-      rooms.push({ id, name: a.rooms[id].name, gx, gy, x: gx * CELL_W, y: gy * CELL_H, w: CELL_W, h: CELL_H });
+      const rdef = a.rooms[id]; rooms.push({ id, name: rdef.name, tint: rdef.tint || null, gx, gy, x: gx * CELL_W, y: gy * CELL_H, w: CELL_W, h: CELL_H });
+      for (const d of rdef.decor || []) { const x = gx * CELL_W + d.x, y = gy * CELL_H + d.y; ents.push({ kind: 'decor', sub: d.sub, x, y, room: id }); if (d.sub !== 'skulls') tiles[y * W + x] = K.DECOR; }
     }
   }
   const out = { id: a.id, def: a, W, H: Hh, tiles, ents, rooms };
