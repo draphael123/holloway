@@ -10,7 +10,7 @@ export function boot() {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     master = ctx.createGain(); master.connect(ctx.destination);
     sfxGain = ctx.createGain(); sfxGain.connect(master); musGain = ctx.createGain(); musGain.connect(master);
-    apply();
+    apply(); loadSamples();
   } catch (e) { ctx = null; }
 }
 export function apply() { if (!ctx) return; master.gain.value = S.muted ? 0 : 1; sfxGain.gain.value = S.sfx; musGain.gain.value = S.music; }
@@ -32,14 +32,28 @@ function noise(dur, vol = 0.3, lp = 4000, hp = 100) {
   const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   s.connect(f); f.connect(h); h.connect(g); g.connect(sfxGain); s.start(t); s.stop(t + dur + 0.02);
 }
+// ---- recorded samples (audio/sfx/*.ogg, CC0; see audio/CREDITS.txt). A missing file falls back to the synth. ----
+const SAMPLES = ['swing1', 'swing2', 'swing3', 'heavy', 'hit_flesh1', 'hit_flesh2', 'hit_wood', 'parry', 'guard', 'hurt', 'goblin1', 'goblin2', 'roar', 'die'];
+const smp = {}; let samplesLoading = false;
+export function loadSamples() {
+  if (samplesLoading || !ctx) return; samplesLoading = true;
+  for (const name of SAMPLES) (async () => { for (const ext of ['ogg', 'wav', 'mp3']) { try { const res = await fetch(`audio/sfx/${name}.${ext}`); if (!res.ok) continue; const buf = await ctx.decodeAudioData(await res.arrayBuffer()); smp[name] = buf; return; } catch (e) { /* try the next */ } } })();
+}
+function sample(name, vol = 0.8, rate = 1, jitter = 0.08) {
+  const buf = smp[name]; if (!buf || !ctx) return false;
+  const s = ctx.createBufferSource(); s.buffer = buf; s.playbackRate.value = rate * (1 + (Math.random() - 0.5) * 2 * jitter);
+  const g = ctx.createGain(); g.gain.value = vol; s.connect(g); g.connect(sfxGain); s.start(); return true;
+}
+const pick = (...names) => names[Math.floor(Math.random() * names.length)];
 export const sfx = {
-  slash(i = 0) { noise(0.09, 0.25, 6000 - i * 800, 900); tone(520 + i * 60, 0.06, 'triangle', 0.08, -200); },
-  heavy() { noise(0.16, 0.35, 3500, 300); tone(180, 0.18, 'sawtooth', 0.15, -80); },
+  slash(i = 0) { if (sample(pick('swing1', 'swing2', 'swing3'), 0.7, 1 + i * 0.05)) return; noise(0.09, 0.25, 6000 - i * 800, 900); tone(520 + i * 60, 0.06, 'triangle', 0.08, -200); },
+  heavy() { if (sample('heavy', 0.9, 0.9)) { tone(180, 0.18, 'sawtooth', 0.08, -80); return; } noise(0.16, 0.35, 3500, 300); tone(180, 0.18, 'sawtooth', 0.15, -80); },
+  voice(kind) { if (kind === 'boss') { if (!sample('roar', 0.9, 1, 0.05)) tone(90, 0.5, 'sawtooth', 0.25, 40); } else sample(pick('goblin1', 'goblin2'), 0.5, 1, 0.15); },
   charge() { tone(220, 0.3, 'triangle', 0.07, 260); },
-  hit(mat = 'flesh') { if (mat === 'wood') { tone(240, 0.06, 'square', 0.18, -100); noise(0.05, 0.2, 2500, 200); } else if (mat === 'stone') { noise(0.08, 0.3, 1800, 100); tone(120, 0.08, 'square', 0.15, -40); } else { noise(0.07, 0.3, 2200, 150); tone(160, 0.07, 'sawtooth', 0.12, -60); } },
-  hurt() { tone(300, 0.14, 'square', 0.22, -160); noise(0.1, 0.2, 1500, 100); },
-  parry() { tone(1400, 0.12, 'square', 0.18, 400); tone(2100, 0.2, 'triangle', 0.12, 300); noise(0.05, 0.15, 8000, 2000); },
-  guard() { tone(200, 0.08, 'square', 0.18, -60); noise(0.06, 0.2, 3000, 300); },
+  hit(mat = 'flesh') { if (mat === 'wood' || mat === 'stone') { if (sample('hit_wood', 0.8)) return; } else if (sample(pick('hit_flesh1', 'hit_flesh2'), 0.8)) return; if (mat === 'wood') { tone(240, 0.06, 'square', 0.18, -100); noise(0.05, 0.2, 2500, 200); } else if (mat === 'stone') { noise(0.08, 0.3, 1800, 100); tone(120, 0.08, 'square', 0.15, -40); } else { noise(0.07, 0.3, 2200, 150); tone(160, 0.07, 'sawtooth', 0.12, -60); } },
+  hurt() { if (sample('hurt', 0.8)) return; tone(300, 0.14, 'square', 0.22, -160); noise(0.1, 0.2, 1500, 100); },
+  parry() { if (sample('parry', 0.9)) { tone(2100, 0.15, 'triangle', 0.06, 300); return; } tone(1400, 0.12, 'square', 0.18, 400); tone(2100, 0.2, 'triangle', 0.12, 300); noise(0.05, 0.15, 8000, 2000); },
+  guard() { if (sample('guard', 0.8)) return; tone(200, 0.08, 'square', 0.18, -60); noise(0.06, 0.2, 3000, 300); },
   guardBreak() { tone(140, 0.3, 'sawtooth', 0.22, -100); noise(0.2, 0.25, 1200, 80); },
   roll() { noise(0.12, 0.12, 1200, 80); },
   step() { noise(0.03, 0.05, 900, 100); },
@@ -64,7 +78,7 @@ export const sfx = {
   roar() { tone(90, 0.5, 'sawtooth', 0.25, 40); tone(135, 0.5, 'square', 0.12, 30); noise(0.4, 0.2, 700, 60); },
   chargeRun() { noise(0.3, 0.25, 800, 80); },
   wallHit() { noise(0.3, 0.45, 1500, 60); tone(50, 0.35, 'square', 0.3, -15); },
-  die(big = false) { if (big) { tone(160, 0.6, 'sawtooth', 0.25, -120); noise(0.5, 0.3, 800, 60); } else { tone(260, 0.2, 'square', 0.15, -180); noise(0.12, 0.2, 2000, 200); } },
+  die(big = false) { if (sample('die', big ? 1 : 0.7, big ? 0.7 : 1)) { if (big) noise(0.5, 0.2, 800, 60); return; } if (big) { tone(160, 0.6, 'sawtooth', 0.25, -120); noise(0.5, 0.3, 800, 60); } else { tone(260, 0.2, 'square', 0.15, -180); noise(0.12, 0.2, 2000, 200); } },
   levelup() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, 'square', 0.12, 0, 0.01 + i * 0.09)); },
   skill() { tone(880, 0.08, 'square', 0.12); tone(1175, 0.16, 'square', 0.1, 0, 0.07); },
   menu() { tone(600, 0.04, 'square', 0.08); },

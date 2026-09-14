@@ -309,7 +309,7 @@ export const AREAS = {
     houses: [{ x: 27, y: 14, w: 4, d: 3, H: 28, name: 'PELL\'S COTTAGE', door: { u: 1.5 }, windows: [{ u: 0.3, v: 10, box: true }, { u: 3.0, v: 10, shutters: true }], chimney: true, wallKey: 'plaster', roofKey: 'thatch' }],
     npcs: [
       { idx: 1, name: 'WARDEN HESK', look: { hair: '#3a2a1a', skin: '#d9a978', tunic: '#5f7a3a', pants: '#4a4a55', boots: '#2a2a2a', accent: '#c9a227', hat: '#6a5a3a' },
-        lines: ['HESK: The Pell boy went under the roots three days back. The wood keeps what it takes.', 'HESK: The warren mouth is north, over the stream. Rats and worse in there.', 'HESK: Whatever you take from the wood, you keep. That is the only law down there.'],
+        lines: ['HESK: The Pell boy went under the roots three days back. The wood keeps what it takes.', 'HESK: The warren mouth is north, over the stream. Goblins in there, and worse under them.', 'HESK: Whatever you take from the wood, you keep. That is the only law down there.'],
         after: ['HESK: You brought him back. Nobody has done that. Nobody.', 'HESK: There is a grate on the stream bank, west, that has been shut since my grandfather. It is open now. I did not open it.'],
         after2: ['HESK: The mere too. The stream runs clearer since. I do not know what you are becoming, but keep at it.'] },
       { idx: 2, name: 'MOTHER PELL', look: { hair: '#6b3f22', skin: '#f2c9a0', tunic: '#8a4a5a', pants: '#8a4a5a', boots: '#3a2a1a', dress: true, accent: '#f7f2e6' },

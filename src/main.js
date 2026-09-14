@@ -3,6 +3,7 @@ import { canvas, mulberry, outline, fromGrid } from './px.js';
 import * as ART from './art.js';
 import * as DA from './dungeon_art.js';
 import * as CH from './chars.js';
+import * as GB from './goblins.js';
 import { text, textW, wrap, fitText } from './font.js';
 import { AREAS, parseArea, roomDoors, K, SOLID, DIGGABLE, SWIMMABLE, CELL_W, CELL_H } from './world.js';
 import { boot as audioBoot, sfx, settings as AUD, apply as audioApply, playMusic, stopMusic } from './audio.js';
@@ -71,17 +72,17 @@ addEventListener('pointerdown', () => { audioBoot(); playMusic(musicUrl(), music
 // DATA — creatures, skills, charms
 // ---------------------------------------------------------------------------------------------
 const ENEMIES = {
-  imp: { name: 'BRAMBLE IMP', hp: 24, spd: 46, r: 6, xp: 6, gold: [1, 3], dmg: 8, aggro: 96, mat: 'wood',
-    blurb: 'A knot of bramble that learned to walk. It lunges. Roll through it.', tells: ['LUNGE'],
+  imp: { name: 'GOBLIN CUTTER', hp: 24, spd: 46, r: 6, xp: 6, gold: [1, 3], dmg: 8, aggro: 96, mat: 'flesh', tn: { LUNGE: 'STAB' },
+    blurb: 'The common goblin of the holloways, with a knife and no patience. It winds up and stabs. Roll through it, or parry the stab.', tells: ['STAB'],
     drops: [{ item: 'heart', rate: 0.12 }, { item: 'charm:thornband', rate: 0.03 }] },
-  rat: { name: 'BOG RAT', hp: 14, spd: 70, r: 6, xp: 4, gold: [0, 2], dmg: 5, aggro: 110, mat: 'flesh',
-    blurb: 'Fast, low, and never alone. The bite is short; the pack is the problem.', tells: ['BITE'],
+  rat: { name: 'GOBLIN WHELP', hp: 14, spd: 70, r: 5, xp: 4, gold: [0, 2], dmg: 5, aggro: 110, mat: 'flesh', tn: { BITE: 'NIP' },
+    blurb: 'A goblin child, and they come in litters. The nip is nothing; six of them is something.', tells: ['NIP'],
     drops: [{ item: 'heart', rate: 0.1 }, { item: 'charm:ratfoot', rate: 0.03 }] },
-  archer: { name: 'THORNSHOT', hp: 20, spd: 40, r: 6, xp: 8, gold: [2, 4], dmg: 9, aggro: 150, mat: 'wood',
-    blurb: 'A twig-man with a bow of its own arm. It keeps its distance. Close it, or guard the arrow.', tells: ['DRAW'],
+  archer: { name: 'GOBLIN SLINGER', hp: 20, spd: 40, r: 6, xp: 8, gold: [2, 4], dmg: 9, aggro: 150, mat: 'flesh', tn: { DRAW: 'SLING' },
+    blurb: 'A hooded goblin with a sling. It keeps its distance and it is not a bad shot. Close it, or guard the stone.', tells: ['SLING'],
     drops: [{ item: 'heart', rate: 0.12 }, { item: 'charm:thornband', rate: 0.04 }] },
-  warden: { name: 'WARREN WARDEN', hp: 44, spd: 34, r: 8, xp: 14, gold: [3, 6], dmg: 9, aggro: 100, mat: 'wood',
-    blurb: 'Keeps a door for whatever lives below. The shield turns a sword. It does not turn THE HEAVY BLOW.', tells: ['SHOVE'],
+  warden: { name: 'GOBLIN SHIELDBEARER', hp: 44, spd: 34, r: 8, xp: 14, gold: [3, 6], dmg: 9, aggro: 100, mat: 'flesh',
+    blurb: 'The tribe\'s doorkeeper, behind a round shield. The shield turns a sword. It does not turn THE HEAVY BLOW.', tells: ['SHOVE'],
     drops: [{ item: 'heart', rate: 0.15 }, { item: 'charm:brockhide', rate: 0.04 }] },
   digger: { name: 'THE DIGGER', hp: 170, spd: 44, r: 12, xp: 60, gold: [12, 20], dmg: 12, aggro: 400, mat: 'flesh', big: true, mini: true,
     blurb: 'The mole reeve of the warren. It goes under and comes up where you stand: watch the ring in the dirt. Its claws are the way to the Brock.', tells: ['BURROW', 'SWIPE', 'THROW'],
@@ -89,11 +90,11 @@ const ENEMIES = {
   brock: { name: 'THE OLD BROCK', hp: 440, spd: 40, r: 18, xp: 200, gold: [30, 50], dmg: 16, aggro: 400, mat: 'flesh', big: true, boss: true,
     blurb: 'The badger the warren was dug for. It charges the length of the room and stuns itself on the wall: that is your window. It shakes the roof down. It goes under.', tells: ['CHARGE', 'SWIPE', 'QUAKE', 'DIG'],
     drops: [{ item: 'keeping', rate: 1 }] },
-  newt: { name: 'MERE NEWT', hp: 18, spd: 74, r: 6, xp: 7, gold: [1, 3], dmg: 7, aggro: 110, mat: 'flesh', swims: true, ai: 'imp', tn: { LUNGE: 'LEAP' },
-    blurb: 'A fat newt with an orange belly. It lives in the water and leaps out of it. You cannot follow it in with a sword.', tells: ['LEAP'],
+  newt: { name: 'BOG GOBLIN', hp: 18, spd: 74, r: 6, xp: 7, gold: [1, 3], dmg: 7, aggro: 110, mat: 'flesh', swims: true, ai: 'imp', tn: { LUNGE: 'LEAP' },
+    blurb: 'A goblin of the drowned tribe, with a reed spear. It swims, and it leaps at you out of the water. You cannot follow it in with a sword.', tells: ['LEAP'],
     drops: [{ item: 'heart', rate: 0.12 }, { item: 'charm:eelskin', rate: 0.03 }] },
-  drowned: { name: 'THE DROWNED', hp: 52, spd: 26, r: 8, xp: 16, gold: [3, 7], dmg: 12, aggro: 90, mat: 'flesh', ai: 'drowned',
-    blurb: 'Someone the stream took. Slow, and it does not mind the sword much. The grab holds you: roll before the hands close.', tells: ['GRAB'],
+  drowned: { name: 'DROWNED GOBLIN', hp: 52, spd: 26, r: 8, xp: 16, gold: [3, 7], dmg: 12, aggro: 90, mat: 'flesh', ai: 'drowned',
+    blurb: 'A goblin the stream took and gave back wrong. Slow, swollen, and it does not mind the sword much. The grab holds you: roll before the hands close.', tells: ['GRAB'],
     drops: [{ item: 'heart', rate: 0.18 }, { item: 'charm:mothsilk', rate: 0.04 }] },
   eelwife: { name: 'THE EELWIFE', hp: 200, spd: 48, r: 12, xp: 80, gold: [15, 25], dmg: 13, aggro: 400, mat: 'flesh', big: true, mini: true, swims: true, ai: 'digger', tn: { BURROW: 'COIL', SWIPE: 'LASH', THROW: 'SPIT' },
     blurb: 'A great eel wearing a drowned woman\'s mask. It coils under the water and comes up where you stand. Its lungs are the way into the Pike\'s pool.', tells: ['COIL', 'LASH', 'SPIT'],
@@ -140,7 +141,7 @@ const wearing = id => P.equipped.includes(id);
 const SPR = {};
 function bakeAll() {
   SPR.hero = CH.bakeHero(); SPR.swords = CH.bakeSwords(); SPR.shield = CH.bakeShield(); SPR.claw = CH.bakeClawHand();
-  SPR.creature = { imp: CH.bakeImp(), rat: CH.bakeRat(), archer: CH.bakeArcher(), warden: CH.bakeWarden(), digger: CH.bakeDigger(), brock: CH.bakeBrock(), newt: CH.bakeNewt(), drowned: CH.bakeDrowned(), eelwife: CH.bakeEelwife(), pike: CH.bakePike() };
+  SPR.creature = { imp: GB.bakeGoblin(GB.CUTTER), rat: GB.bakeGoblin(GB.WHELP), archer: GB.bakeGoblin(GB.SLINGER), warden: GB.bakeGoblin(GB.SHIELDBEARER), digger: CH.bakeDigger(), brock: CH.bakeBrock(), newt: GB.bakeGoblin(GB.BOG), drowned: GB.bakeGoblin(GB.DROWNED), eelwife: CH.bakeEelwife(), pike: CH.bakePike() };
   SPR.ripple = [0, 1, 2].map(f => DA.bakeRipple(f)); SPR.spout = [0, 1, 2].map(f => DA.bakeSpout(f)); SPR.culvert = [DA.bakeCulvert(false), DA.bakeCulvert(true)];
   SPR.arrow = CH.bakeArrow(); SPR.clod = CH.bakeClod();
   SPR.earth = [0, 1, 2, 3].map(i => DA.bakeEarth(11 + i));
@@ -193,7 +194,7 @@ let god = false;
 
 const P = { x: 0, y: 0, facing: 'down', moving: false, walk: 0, hp: 60, maxHp: 60, st: 100, maxSt: 100, stDelay: 0,
   atk: 0, atkDur: 0, combo: 0, atkHit: null, swingEndT: -9, abuf: 0, hold: 0, charging: false, heavy: false, thrust: false,
-  guard: false, parryT: 0, cT: 0, riposte: 0, roll: 0, rollDur: 0.32, rdx: 0, rdy: 0, inv: 0, stagger: 0, flash: 0, dead: false,
+  guard: false, parryT: 0, cT: 0, riposte: 0, roll: 0, rollDur: 0.28, rdx: 0, rdy: 0, inv: 0, stagger: 0, flash: 0, dead: false,
   dig: 0, digTile: null, lvl: 1, xp: 0, pts: 0, might: 0, gold: 0, keys: 0, skills: {}, charms: [], equipped: [null, null], abilities: {}, keepings: 0,
   lastSafe: { x: 0, y: 0 }, push: { x: 0, y: 0 }, lastHurtBy: '', idleT: 0, stepT: 0, softHint: 0 };
 
@@ -328,8 +329,8 @@ const speedMul = () => (has('foot1') ? 1.1 : 1);
 const reach = () => 22 + (has('blade1') ? 6 : 0);
 const arcHalf = () => (has('blade3') ? 1.5 : 1.05);
 const parryWin = () => (has('guard1') ? 0.28 : 0.18);
-const rollDist = () => 100 * (has('foot2') ? 1.35 : 1);
-const rollCost = () => (wearing('ratfoot') ? 12 : 22);
+const rollDist = () => 58 * (has('foot2') ? 1.35 : 1);
+const rollCost = () => (wearing('ratfoot') ? 20 : 32);
 function baseDmg() { return 10 * (1 + 0.07 * (P.lvl - 1) + 0.04 * P.might) * (wearing('thornband') ? 1.12 : 1); }
 function spend(n) { if (god) return true; if (P.st < n) return false; P.st -= n; P.stDelay = 0.7; return true; }
 function canAct() { return P.atk <= 0 && P.roll <= 0 && P.stagger <= 0 && P.dig <= 0 && !P.charging && !P.dead; }
@@ -541,7 +542,7 @@ function finishHolloway() { PROG.quest[area.id] = true; PROG.cleared[`${area.id}
 // ---------------------------------------------------------------------------------------------
 // ENEMIES — every attack is told. The signature is at the TOP of a chain.
 // ---------------------------------------------------------------------------------------------
-function tell(e, name, dur, kind = 0) { e.state = 'tell'; e.t = dur; e.tellDur = dur; e.tellT = dur; e.tellKind = name; e.tellName = tn(e, name); e.hitDone = false; e.lockAng = Math.atan2(P.y - 4 - e.y, P.x - e.x); e.facing = faceOfAng(e.lockAng); if (e.def.big) sfx.tellBig(); else sfx.tell(kind); lastTellT = time; }
+function tell(e, name, dur, kind = 0) { e.state = 'tell'; e.t = dur; e.tellDur = dur; e.tellT = dur; e.tellKind = name; e.tellName = tn(e, name); e.hitDone = false; e.lockAng = Math.atan2(P.y - 4 - e.y, P.x - e.x); e.facing = faceOfAng(e.lockAng); if (e.def.big) { sfx.tellBig(); if (Math.random() < 0.35) sfx.voice('boss'); } else { sfx.tell(kind); if (Math.random() < 0.5) sfx.voice('goblin'); } lastTellT = time; }
 function stepToward(e, tx, ty, sp, dt) {
   const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy); if (d < 1) return;
   const mx = dx / d * sp * dt, my = dy / d * sp * dt; const ox = e.x, oy = e.y;
@@ -605,7 +606,7 @@ function startAttack(e) {
   const n = e.tellKind;
   if (n === 'LUNGE') { e.cd.a = 1.6; sfx.lunge(); }
   else if (n === 'BITE') { e.cd.a = 1.0; sfx.bite(); }
-  else if (n === 'DRAW') { e.cd.a = 2.2; sfx.arrow(); projectiles.push({ kind: 'arrow', x: e.x, y: e.y - 10, vx: Math.cos(e.lockAng) * 150, vy: Math.sin(e.lockAng) * 150, dmg: e.def.dmg, life: 2, ang: e.lockAng, src: e }); e.state = 'recover'; e.t = 0.4; }
+  else if (n === 'DRAW') { e.cd.a = 2.2; sfx.arrow(); projectiles.push({ kind: 'stone', x: e.x, y: e.y - 10, vx: Math.cos(e.lockAng) * 150, vy: Math.sin(e.lockAng) * 150, dmg: e.def.dmg, life: 2, ang: e.lockAng, src: e }); e.state = 'recover'; e.t = 0.4; }
   else if (n === 'SHOVE') { e.cd.a = 2.2; sfx.shove(); }
   else if (n === 'GRAB') { e.cd.a = 2.6; sfx.burrow(); }
   else if (n === 'SWIPE') { sfx.heavy(); }
@@ -655,7 +656,7 @@ function runCharge(e, dt) {
 function updateProjectiles(dt) {
   for (const p of projectiles) {
     p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
-    const tx = Math.floor(p.x / TS), ty = Math.floor(p.y / TS); const pk = tileAt(tx, ty); if (SOLID.has(pk) && !SWIMMABLE.has(pk)) { p.life = 0; puff(p.x, p.y, 3, p.kind === 'arrow' ? '#a6733f' : p.kind === 'spit' ? '#7ab6a0' : '#6e5330', 30); }
+    const tx = Math.floor(p.x / TS), ty = Math.floor(p.y / TS); const pk = tileAt(tx, ty); if (SOLID.has(pk) && !SWIMMABLE.has(pk)) { p.life = 0; puff(p.x, p.y, 3, p.kind === 'arrow' ? '#a6733f' : p.kind === 'spit' ? '#7ab6a0' : p.kind === 'stone' ? '#8a8a90' : '#6e5330', 30); }
     if (p.life > 0 && dist(p.x, p.y, P.x, P.y - 6) < 8) { const took = hitPlayer(p.src, p.dmg, p.x - p.vx * 0.1, p.y - p.vy * 0.1, 90, p.kind); p.life = 0; if (!took) puff(p.x, p.y, 3, '#c9b9a0', 30); }
   }
   projectiles = projectiles.filter(p => p.life > 0);
@@ -804,7 +805,7 @@ const TUT = [
   { id: 'cut', text: 'Press X to CUT. Three presses is a run: the third is a thrust.', done: () => P.combo === 2 && P.atk > 0 },
   { id: 'heavy', text: 'HOLD X and let go for THE HEAVY BLOW. It breaks a shield.', done: () => P.heavy && P.atk > 0 },
   { id: 'guard', text: 'HOLD C to GUARD. Front only. It costs stamina, the green bar.', done: () => P.guard && P.cT > 0.3 },
-  { id: 'parry', text: 'TAP C as a blow lands to PARRY it. Try it on an imp.', done: () => tut.parried },
+  { id: 'parry', text: 'TAP C as a blow lands to PARRY it. Try it on a goblin.', done: () => tut.parried },
   { id: 'roll', text: 'Press Z to ROLL. You cannot be hurt in the middle of it.', done: () => P.roll > 0 },
   { id: 'talk', text: 'Talk to WARDEN HESK with SPACE. Then go north to the warren.', done: () => tut.talked },
 ];
@@ -870,6 +871,8 @@ function drawTiles(ox, oy) {
       case K.PLANK: spr = SPR.plank; break;
     }
     if (spr) g.drawImage(spr, sx, sy);
+    if (holl && k !== K.WALL && tileAt(x, y - 1) === K.WALL) { g.fillStyle = 'rgba(8,6,16,0.32)'; g.fillRect(sx, sy, TS, 4); g.fillStyle = 'rgba(8,6,16,0.14)'; g.fillRect(sx, sy + 4, TS, 3); }
+    if (holl && k !== K.WALL && tileAt(x - 1, y) === K.WALL) { g.fillStyle = 'rgba(8,6,16,0.16)'; g.fillRect(sx, sy, 3, TS); }
     if (stairsAt && stairsAt.x === x && stairsAt.y === y && PROG.cleared[`${area.id}:${stairsAt.room}`]) g.drawImage(SPR.stairs, sx, sy);
   }
   // locks and sealed gates sit on the door cells
@@ -948,7 +951,7 @@ function render() {
   objs.sort((a, b) => a.y - b.y || a.x - b.x);
   for (const o of objs) o.draw();
   // projectiles, rocks, fx
-  for (const p of projectiles) { if (p.kind === 'arrow') { const i = ((Math.round(p.ang / (Math.PI / 4)) % 8) + 8) % 8; g.drawImage(SPR.arrow[i], ox + Math.round(p.x) - 7, oy + Math.round(p.y) - 7); } else if (p.kind === 'spit') { g.fillStyle = '#7ab6a0'; g.fillRect(ox + Math.round(p.x) - 2, oy + Math.round(p.y) - 2, 4, 4); g.fillStyle = '#d6ecf8'; g.fillRect(ox + Math.round(p.x) - 1, oy + Math.round(p.y) - 1, 1, 1); } else g.drawImage(SPR.clod, ox + Math.round(p.x) - 4, oy + Math.round(p.y) - 4); }
+  for (const p of projectiles) { if (p.kind === 'stone') { g.fillStyle = '#8a8a90'; g.fillRect(ox + Math.round(p.x) - 2, oy + Math.round(p.y) - 2, 4, 4); g.fillStyle = '#c9c9d0'; g.fillRect(ox + Math.round(p.x) - 2, oy + Math.round(p.y) - 2, 2, 1); g.fillStyle = '#1b1626'; g.fillRect(ox + Math.round(p.x) + 1, oy + Math.round(p.y) + 1, 1, 1); } else if (p.kind === 'arrow') { const i = ((Math.round(p.ang / (Math.PI / 4)) % 8) + 8) % 8; g.drawImage(SPR.arrow[i], ox + Math.round(p.x) - 7, oy + Math.round(p.y) - 7); } else if (p.kind === 'spit') { g.fillStyle = '#7ab6a0'; g.fillRect(ox + Math.round(p.x) - 2, oy + Math.round(p.y) - 2, 4, 4); g.fillStyle = '#d6ecf8'; g.fillRect(ox + Math.round(p.x) - 1, oy + Math.round(p.y) - 1, 1, 1); } else g.drawImage(SPR.clod, ox + Math.round(p.x) - 4, oy + Math.round(p.y) - 4); }
   for (const r of rocks) { if (area.def.hazard === 'spout') { if (r.done) { const s = SPR.spout[Math.floor(time * 12) % 3]; g.globalAlpha = Math.max(0, r.gone / 0.3); g.drawImage(s.canvas, ox + Math.round(r.x - s.ax), oy + Math.round(r.y - s.ay)); g.globalAlpha = 1; } } else if (!r.done) { const h = (1 - r.t / r.mark) * 90; g.drawImage(SPR.fallRock, ox + Math.round(r.x) - 6, oy + Math.round(r.y - h) - 12); } }
   for (const f of fx) {
     if (f.kind === 'dot') { g.fillStyle = f.col; g.fillRect(ox + Math.round(f.x), oy + Math.round(f.y), Math.round(f.r), Math.round(f.r)); }

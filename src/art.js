@@ -31,9 +31,10 @@ function edgeGrass(g, mask, seed) {
 
 export function bakeGrass(seed) {
   const rnd = mulberry(seed); const [c, g] = canvas(TS, TS); const G = PAL.grass;
-  for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) { const r = rnd(); px(g, x, y, r < 0.06 ? G.lite : r < 0.12 ? G.dark : G.base); }
-  // short blade marks
-  for (let i = 0; i < 3; i++) { const x = 1 + Math.floor(rnd() * 13), y = 2 + Math.floor(rnd() * 12); px(g, x, y, G.dark); px(g, x + 1, y - 1, G.deep); px(g, x + 1, y, G.dark); }
+  for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) { const r = rnd(); px(g, x, y, r < 0.05 ? G.lite : r < 0.13 ? G.dark : G.base); }
+  // a darker patch, then tufts: three blades, shadow at the root, a lit tip
+  if (rnd() < 0.5) { const x = Math.floor(rnd() * 10), y = Math.floor(rnd() * 10); for (let j = 0; j < 5; j++) for (let i = 0; i < 6; i++) if (rnd() < 0.55) px(g, x + i, y + j, G.dark); }
+  for (let i = 0; i < 2; i++) { const x = 2 + Math.floor(rnd() * 11), y = 4 + Math.floor(rnd() * 10); px(g, x - 1, y, G.deep); px(g, x, y, G.deep); px(g, x + 1, y, G.deep); px(g, x - 1, y - 1, G.dark); px(g, x + 1, y - 1, G.dark); px(g, x, y - 1, G.lite); px(g, x, y - 2, G.lite); px(g, x + 1, y - 2, G.dark); }
   return c;
 }
 export function bakeFlowers(seed) {
