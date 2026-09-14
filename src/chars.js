@@ -1,6 +1,6 @@
 // chars.js — the hero, the sword, and every creature in the warren. Baked once; at this size a creature IS its
 // silhouette, so every body is a different shape before it is a different colour.
-import { canvas, px, rect, circle, ellipse, line, mulberry, shade, outline, flipX } from './px.js';
+import { canvas, px, rect, circle, ellipse, line, mulberry, shade, outline, flipX, fromGrid } from './px.js';
 import { bakeCharacter } from './npc_chars.js';
 
 export const HERO_LOOK = { hair: '#5a3a22', skin: '#f2c9a0', tunic: '#7a5a3a', pants: '#3a3a44', boots: '#2a1f18', accent: '#c9a227' };
@@ -121,48 +121,6 @@ export function bakeWarden() { // broad, a round shield, a club; the shield is o
     line(g, kx, ky + 6, kx + (fr === 3 ? 4 : 1), ky, '#7a5230', 2); circle(g, kx + (fr === 3 ? 4 : 1), ky, 2.5, '#5a3a22');
   });
 }
-export function bakeDigger() { // the mole reeve: dark velvet, pink snout, two pale claws bigger than its head
-  return frames(40, 30, (g, cx, base, f, fr) => {
-    const [lx, ly] = lean(fr, f); const bob = fr === 1 ? 1 : 0; cx += lx; base += ly;
-    const vel = '#2e2634', velL = '#4a3d52', velD = '#1c1720';
-    ellipse(g, cx, base - 10 - bob, 14, 9, vel); ellipse(g, cx - 2, base - 12 - bob, 10, 6, velL);
-    if (f === 'up') { ellipse(g, cx, base - 18, 7, 4, vel); }
-    else {
-      const hx = f === 'side' ? cx + 11 : cx, hy = base - 8;
-      ellipse(g, hx, hy, 7, 5, vel); circle(g, hx + (f === 'side' ? 6 : 0), hy + (f === 'side' ? 0 : 3), 2.5, '#e8a0b0');
-      if (f === 'down') { px(g, hx - 3, hy - 1, '#3a3a44'); px(g, hx + 3, hy - 1, '#3a3a44'); }
-    }
-    const spread = fr === 2 ? 4 : fr === 3 ? -2 : 0;
-    for (const s of [-1, 1]) {
-      const px0 = cx + s * (11 + spread), py0 = base - 4 + (fr === 3 ? 2 : 0);
-      ellipse(g, px0, py0, 5, 3, '#c9b9a0');
-      for (let i = -1; i <= 1; i++) line(g, px0 + i * 3, py0 + 1, px0 + i * 3 + (fr === 3 ? s * 2 : 0), py0 + 6, '#e6dcc4', 2);
-    }
-    if (fr === 2) for (let i = 0; i < 5; i++) px(g, cx - 12 + i * 6, base + 1, '#8a6a3f');
-    px(g, cx + (f === 'side' ? -13 : 0), base - 14, velD);
-  });
-}
-export function bakeBrock() { // THE OLD BROCK: a badger the size of the door, striped face, claws
-  return frames(56, 40, (g, cx, base, f, fr) => {
-    const [lx, ly] = lean(fr, f); const bob = fr === 1 ? 1 : 0; cx += lx * 2; base += ly * 2;
-    const fur = '#5a5a66', furL = '#7c7c8a', furD = '#3a3a44', white = '#e6e6ea', blk = '#1e1e26';
-    rect(g, cx - 16, base - 8, 6, 8, furD); rect(g, cx + 10, base - 8 - bob, 6, 8 + bob, furD); rect(g, cx - 6, base - 6, 5, 6, furD); rect(g, cx + 2, base - 6 - bob, 5, 6 + bob, furD);
-    ellipse(g, cx, base - 18 - bob, 22, 13, fur); ellipse(g, cx - 3, base - 21 - bob, 16, 8, furL);
-    for (let i = 0; i < 3; i++) rect(g, cx - 18 + i * 12, base - 26 - bob, 6, 3, white);
-    const hx = f === 'side' ? cx + 20 : cx, hy = f === 'up' ? base - 30 : base - 12;
-    ellipse(g, hx, hy, 11, 8, fur);
-    if (f !== 'up') {
-      // the stripes: the badger's face is the thing you remember
-      rect(g, hx - 1, hy - 8, 3, 14, white); rect(g, hx - 7, hy - 6, 3, 10, white); rect(g, hx + 5, hy - 6, 3, 10, white);
-      rect(g, hx - 4, hy - 7, 3, 12, blk); rect(g, hx + 2, hy - 7, 3, 12, blk);
-      px(g, hx - 3, hy - 2, fr >= 2 ? '#ff5a3a' : '#ffd36b'); px(g, hx + 3, hy - 2, fr >= 2 ? '#ff5a3a' : '#ffd36b');
-      circle(g, hx, hy + 5, 2.5, blk);
-      if (fr === 3) { rect(g, hx - 4, hy + 6, 8, 2, '#e8a0a0'); px(g, hx - 3, hy + 6, white); px(g, hx + 2, hy + 6, white); }
-    } else { rect(g, hx - 1, hy - 8, 3, 12, white); rect(g, hx - 6, hy - 6, 2, 8, white); rect(g, hx + 5, hy - 6, 2, 8, white); }
-    const spread = fr === 2 ? 5 : fr === 3 ? -3 : 0;
-    for (const s of [-1, 1]) { const px0 = cx + s * (19 + spread), py0 = base - 6 + (fr === 3 ? 3 : 0); for (let i = -1; i <= 1; i++) line(g, px0 + i * 3, py0, px0 + i * 3 + (fr === 3 ? s * 3 : 0), py0 + 7, '#e6dcc4', 2); }
-  });
-}
 export function bakeArrow() {
   const out = [];
   for (let i = 0; i < 8; i++) { const th = i * Math.PI / 4; const [c, g] = canvas(14, 14); line(g, 7 - Math.cos(th) * 6, 7 - Math.sin(th) * 6, 7 + Math.cos(th) * 6, 7 + Math.sin(th) * 6, '#a6733f', 1); px(g, 7 + Math.cos(th) * 6, 7 + Math.sin(th) * 6, '#d8dce6'); px(g, 7 - Math.cos(th) * 6, 7 - Math.sin(th) * 6, '#e6dcc4'); out.push(c); }
@@ -179,3 +137,130 @@ export function silhouette(c, col) {
   const [o, g] = canvas(c.width, c.height); g.drawImage(c, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
   m.set(key, o); return o;
 }
+
+// ---- the mere's creatures ----
+export function bakeNewt() { // a fat-tailed mere newt, orange belly, it lunges out of the water
+  return frames(22, 14, (g, cx, base, f, fr) => {
+    const [lx, ly] = lean(fr, f); const bob = fr === 1 ? 1 : 0; cx += lx; base += ly;
+    const sk = '#3a5a3a', skL = '#5a8a4a', belly = '#e0883a';
+    if (f === 'side') {
+      ellipse(g, cx, base - 4 - bob, 8, 3.5, sk); ellipse(g, cx - 1, base - 5 - bob, 5, 2, skL); rect(g, cx - 5, base - 2, 10, 1, belly);
+      circle(g, cx + 8, base - 5 - bob, 3, sk); px(g, cx + 9, base - 6 - bob, '#ffd36b'); px(g, cx + 11, base - 4 - bob, skL);
+      line(g, cx - 7, base - 4, cx - 13, base - 6 + (fr === 1 ? 2 : 0), sk, 2);
+      rect(g, cx - 4, base - 1, 2, 2, sk); rect(g, cx + 3, base - 1 + (fr === 1 ? -1 : 0), 2, 2, sk);
+      if (fr === 3) { px(g, cx + 12, base - 5, '#fff'); }
+    } else {
+      ellipse(g, cx, base - 5 - bob, 5, 6, sk); ellipse(g, cx, base - 6 - bob, 3, 4, skL);
+      if (f === 'down') { circle(g, cx, base - 2, 3.2, sk); px(g, cx - 2, base - 3, '#ffd36b'); px(g, cx + 2, base - 3, '#ffd36b'); rect(g, cx - 1, base - 1, 2, 1, belly); line(g, cx, base - 10, cx + 4, base - 14, sk, 2); }
+      else { circle(g, cx, base - 10, 3, sk); line(g, cx, base - 1, cx - 4, base + 1, sk, 2); }
+      rect(g, cx - 5, base - 2, 2, 2, sk); rect(g, cx + 3, base - 2, 2, 2, sk);
+    }
+    for (let i = 0; i < 3; i++) px(g, cx - 4 + i * 4, base - 8 - bob, '#e0883a');
+  });
+}
+export function bakeDrowned() { // a drowned man, swollen, weed in the hair; slow, it GRABS
+  return frames(24, 28, (g, cx, base, f, fr) => {
+    const [lx, ly] = lean(fr, f); const bob = fr === 1 ? 1 : 0; cx += lx; base += ly;
+    const sk = '#8aa0a8', skD = '#5a7078', cloth = '#3a4a5a', weed = '#2f6a27';
+    rect(g, cx - 5, base - 7, 4, 7, cloth); rect(g, cx + 1, base - 7 - bob, 4, 7 + bob, cloth);
+    ellipse(g, cx, base - 14, 8, 8, sk); ellipse(g, cx - 1, base - 15, 5, 5, '#9ab0b8'); rect(g, cx - 8, base - 12, 16, 4, cloth);
+    circle(g, cx, base - 23, 5, sk); for (let i = -4; i <= 4; i += 2) line(g, cx + i, base - 27, cx + i + (i & 2 ? 1 : -1), base - 30, weed);
+    if (f !== 'up') { px(g, cx - 2, base - 24, '#1b1626'); px(g, cx + 2, base - 24, '#1b1626'); rect(g, cx - 2, base - 21, 4, 1, skD); }
+    const reach = fr === 2 ? -4 : fr === 3 ? 6 : 0;
+    const ax = f === 'side' ? cx + 6 + reach : f === 'down' ? cx : cx; const ay = f === 'down' ? base - 8 + reach : base - 12;
+    if (f === 'side') { rect(g, ax, ay - 2, 6, 3, sk); rect(g, ax + 5, ay - 3, 2, 5, skD); }
+    else { rect(g, cx - 10 - (fr === 3 ? 2 : 0), ay, 4, 3, sk); rect(g, cx + 6 + (fr === 3 ? 2 : 0), ay, 4, 3, sk); }
+  });
+}
+export function bakeEelwife() { // a great eel with a drowned woman's white mask. It COILS under the water.
+  return frames(44, 30, (g, cx, base, f, fr) => {
+    const [lx, ly] = lean(fr, f); const bob = fr === 1 ? 1 : 0; cx += lx; base += ly;
+    const eel = '#2e4a44', eelL = '#4a7a68', mask = '#efe3c8';
+    // the coils
+    for (let i = 0; i < 3; i++) { const ox = f === 'side' ? -14 + i * 9 : -12 + i * 12, oy = f === 'side' ? 0 : (i & 1) * 3; ellipse(g, cx + ox, base - 8 - bob + oy, 8, 5, eel); ellipse(g, cx + ox - 1, base - 10 - bob + oy, 5, 2, eelL); }
+    const hx = f === 'side' ? cx + 14 : cx, hy = f === 'up' ? base - 20 : base - 14 - (fr === 2 ? 3 : 0);
+    ellipse(g, hx, hy, 7, 9, eel);
+    if (f !== 'up') { ellipse(g, hx, hy + 1, 5, 6, mask); px(g, hx - 2, hy - 1, '#1b1626'); px(g, hx + 2, hy - 1, '#1b1626'); rect(g, hx - 1, hy + 3, 3, 1, '#8a3a3a'); if (fr >= 2) { px(g, hx - 2, hy - 1, '#ff5a3a'); px(g, hx + 2, hy - 1, '#ff5a3a'); } }
+    line(g, hx - 6, hy - 8, hx - 9, hy - 2, eelL); line(g, hx + 6, hy - 8, hx + 9, hy - 2, eelL);
+    if (fr === 3) for (let i = 0; i < 3; i++) px(g, hx + (f === 'side' ? 8 : -4 + i * 4), hy + (f === 'side' ? -4 + i * 4 : 8), '#d6ecf8');
+  });
+}
+export function bakePike() { // THE OLD PIKE: long, armoured, a mouth like a trap. Fills the lane it swims in.
+  return frames(64, 36, (g, cx, base, f, fr) => {
+    const [lx, ly] = lean(fr, f); const bob = fr === 1 ? 1 : 0; cx += lx * 2; base += ly * 2;
+    const sc = '#4a6a3a', scL = '#7a9a4a', scD = '#2a3a22', belly = '#c9c9a0', tooth = '#efe3c8';
+    if (f === 'side') {
+      ellipse(g, cx - 4, base - 12 - bob, 26, 8, sc); ellipse(g, cx - 4, base - 15 - bob, 20, 4, scL); ellipse(g, cx - 2, base - 8 - bob, 22, 3, belly);
+      for (let i = -20; i <= 10; i += 5) rect(g, cx + i, base - 18 - bob, 2, 3, scD);
+      line(g, cx - 30, base - 20, cx - 24, base - 12, sc, 3); line(g, cx - 30, base - 4, cx - 24, base - 12, sc, 3);
+      ellipse(g, cx + 22, base - 12 - bob, 10, 6, sc); px(g, cx + 24, base - 15 - bob, fr >= 2 ? '#ff5a3a' : '#ffd36b');
+      const gape = fr === 2 ? 5 : fr === 3 ? 7 : 1; line(g, cx + 26, base - 11, cx + 33, base - 11 - gape, sc, 2); line(g, cx + 26, base - 10, cx + 33, base - 10 + gape, sc, 2);
+      for (let i = 0; i < 4; i++) { px(g, cx + 27 + i * 2, base - 11 - gape + Math.floor(i * gape / 4), tooth); px(g, cx + 27 + i * 2, base - 9 + gape - Math.floor(i * gape / 4), tooth); }
+    } else {
+      ellipse(g, cx, base - 14 - bob, 9, 16, sc); ellipse(g, cx - 1, base - 16 - bob, 5, 12, scL);
+      for (let i = -12; i <= 8; i += 5) rect(g, cx - 1, base - 16 - bob + i, 3, 2, scD);
+      const hy = f === 'up' ? base - 30 : base - 2;
+      ellipse(g, cx, hy, 8, 6, sc);
+      if (f === 'down') { px(g, cx - 4, hy - 3, fr >= 2 ? '#ff5a3a' : '#ffd36b'); px(g, cx + 4, hy - 3, fr >= 2 ? '#ff5a3a' : '#ffd36b'); const gape = fr === 2 ? 3 : fr === 3 ? 5 : 1; rect(g, cx - 6, hy, 12, gape, '#1b1626'); for (let i = 0; i < 5; i++) { px(g, cx - 5 + i * 2 + (i & 1), hy, tooth); px(g, cx - 5 + i * 2, hy + gape - 1, tooth); } }
+      line(g, cx - 9, base - 24, cx - 13, base - 30, sc, 2); line(g, cx + 9, base - 24, cx + 13, base - 30, sc, 2);
+    }
+  });
+}
+
+// ---- hand-pixelled Brock and Digger: text grids, mirrored halves for the front and back views ----
+const mir = half => half + half.split('').reverse().join('');
+function gridBeast(rowsDown, rowsSide, pal, palAngry, w, h) {
+  const bakeRows = (rows, p) => outline(fromGrid(rows, p, 1));
+  const down = bakeRows(rowsDown, pal), downA = bakeRows(rowsDown, palAngry), side = bakeRows(rowsSide, pal), sideA = bakeRows(rowsSide, palAngry);
+  const up = bakeRows(rowsDown.map(r => r.replace(/[ekpwm]/g, ch => ch === 'w' ? 'w' : ch === 'k' ? 'g' : ch === 'p' ? 'g' : ch === 'e' ? 'g' : 'g')), pal);
+  const mk = (base, angry, f) => [0, 1, 2, 3, 4].map(fr => {
+    const src = fr === 2 || fr === 3 ? angry : base; const [c, g] = canvas(w, h);
+    const [lx, ly] = lean(fr, f); const bob = fr === 1 ? -1 : 0;
+    g.drawImage(src, Math.round((w - src.width) / 2 + lx), Math.round(h - 2 - src.height + ly + bob));
+    return { canvas: c, ax: w / 2, ay: h - 2 };
+  });
+  const out = { down: mk(down, downA, 'down'), up: mk(up, up, 'up'), right: mk(side, sideA, 'side') };
+  out.left = out.right.map(f => ({ ...f, canvas: flipX(f.canvas) }));
+  return out;
+}
+// keys: g grey fur, G dark fur, l light fur, w white, k black, p pink nose, e eye, c claw, o outline-dark
+const BROCK_PAL = { g: '#5a5a66', G: '#3a3a44', l: '#7c7c8a', w: '#e6e6ea', k: '#1e1e26', p: '#e8a0a0', e: '#ffd36b', c: '#e6dcc4', o: '#2a2a30' };
+const BROCK_ANGRY = { ...BROCK_PAL, e: '#ff5a3a' };
+const BROCK_DOWN = [
+  mir('..........GGGGGGGGGGGG'), mir('.......GGGggggggggglll'), mir('.....GGggggggllllllllw'), mir('....GGgggggglllllllwww'),
+  mir('...GGggggggllllllllwww'), mir('..GGgggggggllllllllwww'), mir('..Ggggggggggllllllllww'), mir('.GGgggggggggglllllllll'),
+  mir('.GGggggggggggggllllllg'), mir('.GGgggggggggggggggggg.'), mir('.GGggggggggggggggggg..'), mir('..GGggggggggggggggg...'),
+  mir('..GGGgggggggggggggg...'), mir('...GGGgggggggggggg....'), mir('....GGGggggggggggg....'), mir('.....GGGGgggggwwww....'),
+  mir('......GGGggggwwwwk....'), mir('.......GGgggwwwwkke...'), mir('........Ggggwwwkkkkw..'), mir('........Ggggwwwkkkkw..'),
+  mir('.........gggwwwwkkww..'), mir('.........gggwwwwwwww..'), mir('..........ggwwwwwwww..'), mir('..........gggwwwwwpp..'),
+  mir('...........gggwwwwpp..'), mir('....GG......gggggg....'), mir('...GGcc......GGG......'), mir('..GGccc.......G.......'),
+  mir('..Gcc.c...............'), mir('..cc.cc...............'),
+];
+const BROCK_SIDE = [
+  '..................GGGGGGGGGGG.......', '..............GGGGgggggggggggGG.....', '...........GGGggggggggggggggggggG...', '.........GGgggggggggggggggggggggGG..',
+  '.......GGgggglllllllllllllllgggggGG.', '......GGggglllllllllllllllllllgggGG.', '.....GGggglllllllllllllllllllllgggG.', '....GGgggglllllllllllllllllllllgggG.',
+  '...GGgggggglllllllllllllllllllggggGG', '..GGggggggggllllllllllllllllggggggwG', '..GGggggggggggggggggggggggggggggwwww', '.GGggggggggggggggggggggggggggggwwkkw',
+  '.GGgggggggggggggggggggggggggggwwkkew', '.GGgggggggggggggggggggggggggggwwkkkw', '.GGgggggggggggggggggggggggggggwwwkkw', '..GGggggggggggggggggggggggggggwwwwww',
+  '..GGgggggggggggggggggggggggggwwwwwpp', '...GGGgggggggggggggggggggggggwwwwwpp', '....GGGgggggggggggggggggggggggwwww..', '.....GGGGGGGGgggggggggGGGGGgggggg...',
+  '......GGGG..GGGGGGGG.....GGGGGG.....', '......GGG.....GGGG........GGGG......', '.....GGcc.....GGcc.......GGcc.......', '....GGccc....GGccc......GGccc.......',
+  '....Gc.cc....Gc.cc......Gc.cc.......', '....cc..c....cc..c......cc..c.......',
+];
+export function bakeBrock() { return gridBeast(BROCK_DOWN, BROCK_SIDE, BROCK_PAL, BROCK_ANGRY, 56, 40); }
+const DIG_PAL = { g: '#2e2634', G: '#1c1720', l: '#4a3d52', w: '#c9b9a0', k: '#3a3a44', p: '#e8a0b0', e: '#ffd36b', c: '#e6dcc4', o: '#141018' };
+const DIG_ANGRY = { ...DIG_PAL, e: '#ff5a3a' };
+const DIGGER_DOWN = [
+  mir('........GGGGGGGGGG'), mir('......GGggggggllll'), mir('....GGggggggllllll'), mir('...GGgggggggllllll'), mir('..GGggggggggglllll'),
+  mir('..GGggggggggggllll'), mir('.GGggggggggggggggg'), mir('.GGggggggggggggggg'), mir('.GGggggggggggggggg'), mir('..GGgggggggggggggg'),
+  mir('..GGGggggggggggggg'), mir('...GGGgggggggggggg'), mir('....GGGGgggggggggg'), mir('......GGGggggggggg'), mir('.......GGgggggggge'),
+  mir('........GGgggggggg'), mir('........GGGgggggpp'), mir('.........GGGgggppp'), mir('..cc......GGGGgppp'), mir('.cccc......GGGGGG.'),
+  mir('.cwwcc.....GGGG...'), mir('.cwwwcc...........'), mir('.cwwwwc...........'), mir('..cwwwc...........'), mir('...cccc...........'), mir('....cc............'),
+];
+const DIGGER_SIDE = [
+  '.............GGGGGGGGGGG........', '..........GGGgggggggggggGG......', '........GGgggglllllllllggggG....', '......GGggggllllllllllllggggG...',
+  '.....GGgggglllllllllllllllgggG..', '....GGggggglllllllllllllllgggGG.', '...GGgggggggllllllllllllllggggG.', '..GGgggggggggggggggggggggggggggG',
+  '..GGggggggggggggggggggggggggggggg', '.GGgggggggggggggggggggggggggggegg', '.GGggggggggggggggggggggggggggggpp', '.GGgggggggggggggggggggggggggggppp',
+  '.GGggggggggggggggggggggggggggggpp', '..GGgggggggggggggggggggggggggggg.', '..GGGgggggggggggggggggggggggggg..', '...GGGggggggggggggggggggggGGGG...',
+  '....GGGGGggggggggggggGGGGGG......', '......GGGGGGGGGGGGGGGGG..........', '........GGcc.......GGcc..........', '.......GGcwwc.....GGcwwc.........',
+  '.......Gcwwwwc....Gcwwwwc........', '.......cwwwwwc....cwwwwwc........', '........cwwwc......cwwwc.........', '.........ccc........ccc..........',
+];
+export function bakeDigger() { return gridBeast(DIGGER_DOWN, DIGGER_SIDE, DIG_PAL, DIG_ANGRY, 40, 30); }

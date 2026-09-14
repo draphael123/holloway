@@ -4,7 +4,7 @@
 // the boss room holds exactly one boss; chest/mound tables match their cells; every enemy id is defined.
 import { AREAS, parseArea, roomDoors, K, SOLID, CELL_W, CELL_H } from '../src/world.js';
 
-const ENEMY_IDS = ['imp', 'rat', 'archer', 'warden', 'digger', 'brock'];
+const ENEMY_IDS = ['imp', 'rat', 'archer', 'warden', 'digger', 'brock', 'newt', 'drowned', 'eelwife', 'pike'];
 let fails = 0, warns = 0;
 const fail = s => { fails++; console.log('  FAIL ' + s); };
 const warn = s => { warns++; console.log('  warn ' + s); };
@@ -26,6 +26,7 @@ for (const id in AREAS) {
     (n / total < 0.9 ? warn : ok)(`${n}/${total} walkable tiles reachable from the start`);
     for (const e of area.ents) if ((e.kind === 'enemy' || e.kind === 'npc' || e.kind === 'sign' || e.kind === 'mouth') && !seen.has(e.x + ',' + e.y) && !(e.kind === 'mouth')) fail(`${e.kind} at ${e.x},${e.y} unreachable`);
     const mouth = area.ents.find(e => e.kind === 'mouth'); if (mouth && !seen.has(mouth.x + ',' + (mouth.y + 1))) fail('the warren mouth is not reachable'); else if (mouth) ok('the mouth is reachable');
+    const cul = area.ents.find(e => e.kind === 'culvert'); if (cul && !seen.has(cul.x + ',' + (cul.y - 1))) fail('the culvert is not reachable from the bank above it'); else if (cul) ok('the culvert is reachable');
     continue;
   }
   // ---- holloway ----
@@ -46,21 +47,24 @@ for (const id in AREAS) {
   for (const rid in def.mounds || {}) { const n = area.ents.filter(e => e.kind === 'mound' && e.room === rid).length; if (n !== def.mounds[rid].length) warn(`room ${rid}: ${n} mounds but ${def.mounds[rid].length} in the table (extras give gold)`); }
   // staged reachability: from the entry, walking floor; locks open with a key; soft earth opens with the claw
   const start = starts[0]; const keyRoom = Object.keys(def.chests || {}).find(r => def.chests[r].includes('key'));
-  const stage = (allowLock, allowDig) => {
+  const stage = (allowLock, allowVerb, allowAll) => {
     const seen = new Set([start.x + ',' + start.y]); const q = [[start.x, start.y]]; const roomsSeen = new Set();
     const isLock = (x, y) => area.ents.some(e => e.kind === 'lock' && e.x === x && e.y === y);
+    const verbPass = tk => (def.verb === 'swim' ? tk === K.DEEP : (tk === K.SOFT || tk === K.MOUND));
     while (q.length) { const [x, y] = q.pop(); roomsSeen.add(def.grid[Math.floor(y / CELL_H)][Math.floor(x / CELL_W)]);
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (seen.has(k)) continue; const tk = t(nx, ny); let pass = walk(tk) && tk !== K.PIT; if (isLock(nx, ny)) pass = allowLock; if ((tk === K.SOFT || tk === K.MOUND) && allowDig) pass = true; if (pass) { seen.add(k); q.push([nx, ny]); } } }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (seen.has(k)) continue; const tk = t(nx, ny); let pass = walk(tk) && tk !== K.PIT; if (isLock(nx, ny)) pass = allowLock; if (verbPass(tk) && allowVerb) pass = true; if (allowAll && (tk === K.SOFT || tk === K.MOUND || tk === K.DEEP)) pass = true; if (pass) { seen.add(k); q.push([nx, ny]); } } }
     return { seen, roomsSeen };
   };
-  const s0 = stage(false, false), s1 = stage(true, false), s2 = stage(true, true);
+  // stages: nothing → the key → the key and this holloway's verb → everything any holloway teaches
+  const s0 = stage(false, false, false), s1 = stage(true, false, false), s2 = stage(true, true, false), s3 = stage(true, true, true);
   const inRoom = (set, rid) => set.has(rid);
   if (keyRoom && !inRoom(s0.roomsSeen, keyRoom)) fail(`the key room ${keyRoom} needs the key to reach`); else if (keyRoom) ok(`key room ${keyRoom} reachable without the key`);
   const miniRoom = miniEnts[0] && miniEnts[0].room; if (miniRoom && inRoom(s0.roomsSeen, miniRoom)) warn(`mini room ${miniRoom} is reachable without the key`); if (miniRoom && !inRoom(s1.roomsSeen, miniRoom)) fail(`mini room ${miniRoom} unreachable even with the key`); else if (miniRoom) ok(`mini room ${miniRoom} opens with the key`);
-  const bossRoom = bossEnts[0] && bossEnts[0].room; if (bossRoom && inRoom(s1.roomsSeen, bossRoom)) warn(`boss room ${bossRoom} is reachable without the claw`); if (bossRoom && !inRoom(s2.roomsSeen, bossRoom)) fail(`boss room ${bossRoom} unreachable even with the claw`); else if (bossRoom) ok(`boss room ${bossRoom} opens with the claw`);
-  for (const r of rooms) if (!s2.roomsSeen.has(r.id)) fail(`room ${r.id} ${r.name} is never reachable`);
+  const bossRoom = bossEnts[0] && bossEnts[0].room; if (bossRoom && inRoom(s1.roomsSeen, bossRoom)) warn(`boss room ${bossRoom} is reachable without the verb (${def.verb})`); if (bossRoom && !inRoom(s2.roomsSeen, bossRoom)) fail(`boss room ${bossRoom} unreachable even with the verb (${def.verb})`); else if (bossRoom) ok(`boss room ${bossRoom} opens with the verb (${def.verb})`);
+  for (const r of rooms) if (!s3.roomsSeen.has(r.id)) fail(`room ${r.id} ${r.name} is never reachable`); else if (!s2.roomsSeen.has(r.id)) ok(`room ${r.id} ${r.name} needs another holloway's verb (optional)`);
   // every chest reachable with everything
-  for (const e of area.ents) if (e.kind === 'chest') { const adj = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => s2.seen.has((e.x + dx) + ',' + (e.y + dy))); if (!adj) fail(`chest at ${e.x},${e.y} cannot be stood next to`); }
+  for (const e of area.ents) if (e.kind === 'chest') { const adj = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => s3.seen.has((e.x + dx) + ',' + (e.y + dy))); if (!adj) fail(`chest at ${e.x},${e.y} cannot be stood next to`); }
+  const stairsEnt = area.ents.find(e => e.kind === 'stairs'); if (stairsEnt && !s2.seen.has(stairsEnt.x + ',' + stairsEnt.y)) fail('the stairs out cannot be stood on with this holloway\'s own verb');
   // density: foes per room
   const counts = {}; for (const e of area.ents) if (e.kind === 'enemy') counts[e.room] = (counts[e.room] || 0) + 1;
   ok('foes per room: ' + rooms.map(r => `${r.id}=${counts[r.id] || 0}`).join(' '));

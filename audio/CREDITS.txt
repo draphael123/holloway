@@ -1,2 +1,4 @@
 audio/theme.ogg — "SNES RPG Overworld" by Emma_MA, CC0 (public domain), https://opengameart.org/content/snes-rpg-overworld
 Transcoded from the WAV to OGG Vorbis q5.
+audio/descent.ogg — "8-bit Cave Loop" by Wolfgang_, CC0 (public domain), https://opengameart.org/content/8-bit-cave-loop
+Transcoded from the WAV to OGG Vorbis q5.

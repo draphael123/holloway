@@ -176,3 +176,27 @@ export function bakeMouth() { // the warren mouth: a dark hole under roots, 2 ti
 }
 export const shadowSmall = () => bakeShadow(6, 2);
 export const shadowBig = () => bakeShadow(11, 4);
+
+// ---- the mere ----
+export function bakeDeep(waterTile, frame) { // deep water: the stream's tile, drowned in shadow, with a slow gleam
+  const [c, g] = canvas(TS, TS); g.drawImage(waterTile, 0, 0);
+  g.fillStyle = 'rgba(6,10,40,0.55)'; g.fillRect(0, 0, TS, TS);
+  const rnd = mulberry(900 + frame); for (let i = 0; i < 2; i++) { const x = (Math.floor(rnd() * 12) + frame * 3) % 14, y = 2 + Math.floor(rnd() * 11); px(g, x, y, '#5d9be0'); px(g, x + 1, y, '#3a78c9'); }
+  return c;
+}
+export function bakeRipple(frame) { const r = 9 + frame * 2; const [c, g] = canvas(r * 2 + 2, r + 2); ellipse(g, r + 1, r / 2 + 1, r, r / 2, 'rgba(214,236,248,0.55)'); ellipse(g, r + 1, r / 2 + 1, r - 1.5, r / 2 - 1, 'rgba(0,0,0,0)'); const gg = c.getContext('2d'); gg.globalCompositeOperation = 'destination-out'; gg.fillStyle = '#000'; for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) { const dx = (x + 0.5 - r - 1) / (r - 1.5), dy = (y + 0.5 - r / 2 - 1) / (r / 2 - 1); if (dx * dx + dy * dy <= 1) gg.fillRect(x, y, 1, 1); } gg.globalCompositeOperation = 'source-over'; return { canvas: c, ax: r + 1, ay: r / 2 + 1 }; }
+export function bakeSpout(frame) { // a column of water thrown up from below
+  const h = 28 + frame * 6; const [c, g] = canvas(14, h); const rnd = mulberry(70 + frame);
+  for (let y = 0; y < h; y++) { const w = 3 + Math.round(Math.sin(y * 0.4 + frame) * 1.5) + (y < 4 ? 3 : 0); rect(g, 7 - w, y, w * 2, 1, y % 3 === 0 ? '#d6ecf8' : '#5d9be0'); }
+  for (let i = 0; i < 6; i++) px(g, Math.floor(rnd() * 14), Math.floor(rnd() * 6), '#d6ecf8');
+  return { canvas: c, ax: 7, ay: h };
+}
+export function bakeCulvert(open) { // a stone arch in the stream bank with an iron grate; open = the grate is up
+  const [c, g] = canvas(34, 26);
+  rect(g, 0, 8, 34, 18, D.rock.face); for (let y = 10; y < 26; y += 4) { rect(g, 0, y, 34, 1, D.rock.faceD); for (let x = ((y / 4) & 1) * 4; x < 34; x += 8) rect(g, x, y + 1, 1, 3, D.rock.faceD); }
+  for (let y = 0; y < 8; y++) { const w = Math.round(Math.sqrt(64 - (8 - y) * (8 - y)) * 1.6); rect(g, 17 - w, y + 2, w * 2, 1, D.rock.faceL); }
+  ellipse(g, 17, 16, 10, 8, '#050408');
+  if (!open) for (let x = 9; x <= 25; x += 4) rect(g, x, 8, 2, 16, D.iron); else { rect(g, 7, 6, 20, 3, D.iron); for (let x = 9; x <= 25; x += 4) rect(g, x, 6, 2, 3, D.ironL); }
+  rect(g, 0, 8, 34, 1, D.rock.faceL); rect(g, 0, 0, 34, 2, '#3d7a30'); rect(g, 0, 2, 34, 1, '#2f5a27');
+  return { canvas: c, ax: 17, ay: 26 };
+}

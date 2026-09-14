@@ -6,17 +6,20 @@
 //   O  pit                ,  grass              :  dirt road          T  tree              W  water
 //   =  plank bridge       H  house footprint    r  rock (blocks)      b  brazier (blocks)  s  bones (deco)
 //   c  chest              S  sign / tablet      h  heart              K  locked door cell  ^  stairs (boss exit)
-//   @  start / entry      D  warren mouth       !  falling-rock spot  1-9 NPC index
-//   i  bramble imp   t  bog rat   a  thornshot   w  warren warden   M  the Digger   B  the Old Brock
+//   @  start / entry      D  warren mouth       !  falling-rock / spout spot  1-9 NPC index
+//   ~  deep water (swim with THE LUNGS)   V  the culvert (the mere's mouth, on the stream bank)
+//   i  bramble imp   t  rat   a  thornshot   w  warren warden   M  the Digger   B  the Old Brock
+//   n  mere newt     d  the drowned   E  the Eelwife   Q  the Old Pike
 
 export const TS = 16;
 export const CELL_W = 20, CELL_H = 11;
 
-export const K = { WALL: 1, FLOOR: 2, SOFT: 3, MOUND: 4, PIT: 5, GRASS: 6, DIRT: 7, TREE: 8, WATER: 9, PLANK: 10, HOUSE: 11, ROCK: 12, BRAZIER: 13, MOUTH: 14, STAIRS: 15 };
-export const SOLID = new Set([K.WALL, K.SOFT, K.MOUND, K.TREE, K.WATER, K.HOUSE, K.ROCK, K.BRAZIER]);
+export const K = { WALL: 1, FLOOR: 2, SOFT: 3, MOUND: 4, PIT: 5, GRASS: 6, DIRT: 7, TREE: 8, WATER: 9, PLANK: 10, HOUSE: 11, ROCK: 12, BRAZIER: 13, MOUTH: 14, STAIRS: 15, DEEP: 16, CULVERT: 17 };
+export const SOLID = new Set([K.WALL, K.SOFT, K.MOUND, K.TREE, K.WATER, K.HOUSE, K.ROCK, K.BRAZIER, K.DEEP]);
+export const SWIMMABLE = new Set([K.DEEP]);
 export const DIGGABLE = new Set([K.SOFT, K.MOUND]);
 
-const ENEMY_CH = { i: 'imp', t: 'rat', a: 'archer', w: 'warden', M: 'digger', B: 'brock' };
+const ENEMY_CH = { i: 'imp', t: 'rat', a: 'archer', w: 'warden', M: 'digger', B: 'brock', n: 'newt', d: 'drowned', E: 'eelwife', Q: 'pike' };
 
 // ---------------------------------------------------------------------------------------------
 // THE WARREN — nine rooms, three by three. Row-major: A B C / D E F / G H I.
@@ -142,6 +145,132 @@ const WARREN_ROOMS = {
   ] },
 };
 
+// ---------------------------------------------------------------------------------------------
+// THE MERE — the drowned holloway under the stream. Deep water is a wall until you have THE LUNGS.
+// Same grid: A B C / D E F / G H I. The plug into the Pike's pool is water, not earth.
+// ---------------------------------------------------------------------------------------------
+const MERE_ROOMS = {
+  A: { name: 'THE WEIR', rows: [
+    '####################',
+    '#..~~..............#',
+    '#..~~....d.........#',
+    '#..~~..c...........#',
+    '#..~~~~~~~..........',
+    '#......~~..n........',
+    '#......~~..........#',
+    '#..n...~~....d.....#',
+    '#......~~..........#',
+    '#......~~..........#',
+    '####################',
+  ] },
+  B: { name: 'THE SHALLOWS', rows: [
+    '####################',
+    '#..................#',
+    '#..n...~~~~...n....#',
+    '#.....~~~~~~.......#',
+    '....d.~~~~~~...d....',
+    '......~~~~~~........',
+    '#..n...~~~~...n....#',
+    '#..................#',
+    '#..s...............#',
+    '#..................#',
+    '#########..#########',
+  ] },
+  C: { name: 'THE DROWNED CHAPEL', rows: [
+    '####################',
+    '#..................#',
+    '#....~~~~~~~~~~....#',
+    '#....~........~....#',
+    '.....~...c....~....#',
+    '.....~........~....#',
+    '#....~~~~~~~~~~....#',
+    '#..a...........a...#',
+    '#..................#',
+    '#..................#',
+    '####################',
+  ] },
+  D: { name: 'THE EELWIFE\'S POOL', rows: [
+    '####################',
+    '#~~~~..............#',
+    '#~~~~..............#',
+    '#~~~~..............#',
+    '#~~~~.....E.........',
+    '#~~~~...............',
+    '#~~~~..............#',
+    '#~~~~..........~~..#',
+    '#~~~~..........~~..#',
+    '#~~~~..........~~..#',
+    '####################',
+  ] },
+  E: { name: 'THE CISTERN', rows: [
+    '#########..#########',
+    '#....s.............#',
+    '#...b.....~~...b...#',
+    '#.........~~.......#',
+    'K.........~~........',
+    'K.........~~........',
+    '#..d......~~.......#',
+    '#...b.....~~...b...#',
+    '#..........~.......#',
+    '#..................#',
+    '#########..#########',
+  ] },
+  F: { name: 'THE SLUICE', rows: [
+    '####################',
+    '#.......a..........#',
+    '#..r...............#',
+    '#.....~~~~~~.......#',
+    '......~~~~~~.......#',
+    '......~~~~~~.......#',
+    '#...........a......#',
+    '#..................#',
+    '#.........a........#',
+    '#..........r.......#',
+    '#########~~#########',
+  ] },
+  G: { name: 'THE SILT BEDS', rows: [
+    '####################',
+    '#%%%%%%%%%%%%%%%%%%#',
+    '#%%*%%%%%%%%%%*%%%%#',
+    '#%%%%%%%%~~~~%%%%%%#',
+    '#%%%%%%%%~~~~.......',
+    '#%%*%%%%%~~~~.d.....',
+    '#%%%%%%%%~~~~......#',
+    '#%%%%%%%%%%%%%%*%%%#',
+    '#%%%*%%%%%%%%%%%%%%#',
+    '#%%%%%%%%%%%%%%%%%%#',
+    '####################',
+  ] },
+  H: { name: 'THE CULVERT', rows: [
+    '#########..#########',
+    '#......s...........#',
+    '#..!...~~~!........#',
+    '#......~~....!.....#',
+    '....~~~~~....r.....#',
+    '....!.~~~~.....!...#',
+    '#......~~..........#',
+    '#..r...~~!.....s...#',
+    '#......~~..!.......#',
+    '#......~~.@........#',
+    '#########..#########',
+  ] },
+  I: { name: 'THE OLD PIKE', rows: [
+    '#########..#########',
+    '#~~~~~~~~..~~~~~~~~#',
+    '#~................~#',
+    '#~....~~....~~....~#',
+    '#~....~~....~~....~#',
+    '#~........Q.......~#',
+    '#~....~~....~~....~#',
+    '#~....~~....~~....~#',
+    '#~................~#',
+    '#~~~~~~~~^~~~~~~~~~#',
+    '####################',
+  ] },
+};
+const MERE_CHESTS = { A: ['key'], C: ['charm:eelskin'] };
+const MERE_MOUNDS = { G: ['gold', 'heart', 'charm:pikescale', 'gold', 'gold'] };
+
 // what the chests hold, in reading order per room
 const WARREN_CHESTS = { A: ['key'], C: ['charm:thornband'] };
 // what the mounds hold, in reading order per room (every mound gives gold as well)
@@ -160,7 +289,7 @@ export const AREAS = {
       'TT,,,,,,,,,,r,,,,,,,::,,,,,,,,,,,,,,T,TT',
       'TT,,T,,,,,,,,,,,,,,,::,,,,r,,,,,,,,,,,TT',
       'TT,,,,,,,,,i,,,,,,,,::,,,,,,,,,,,,,,,,TT',
-      'TWWWWWWWWWWWWWWWWWWW==WWWWWWWWWWWWWWWWWT',
+      'TWVVWWWWWWWWWWWWWWWW==WWWWWWWWWWWWWWWWWT',
       'TT,,,,,,,,,,,,,,,,,,::,,,,,,,,,,,,,,,,TT',
       'TT,,,T,,,,,,,,,,,,,,::,,,,,,,,,,,,T,,,TT',
       'TT,,,,,,,,,,,,,,,,,,::,,,,,,,,,,,,,,,,TT',
@@ -172,7 +301,7 @@ export const AREAS = {
       'TT,,,,,,,,,,,1,,,,,,::::::::2,,,,,,,,,TT',
       'TT,,,,,,,,,,,,,,,,,,::,,,,,,,,,,,,,,,,TT',
       'TT,,,T,,,,,,,,,,,S,,::,,,,,,,,,,,,,,,,TT',
-      'TT,,,,,,,,,,,,,,,,,,@:,,,,,,,,T,,,,,,,TT',
+      'TT,,,,,,,,,,,,,,,,,,@:,,,3,,,,T,,,,,,,TT',
       'TTT,,,,,,,,,,,,,,,,,::,,,,,,,,,,,,,,,TTT',
       'TTTT,,,,,,,,,,,,,,,,::,,,,,,,,,,,,,,TTTT',
       'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
@@ -181,13 +310,17 @@ export const AREAS = {
     npcs: [
       { idx: 1, name: 'WARDEN HESK', look: { hair: '#3a2a1a', skin: '#d9a978', tunic: '#5f7a3a', pants: '#4a4a55', boots: '#2a2a2a', accent: '#c9a227', hat: '#6a5a3a' },
         lines: ['HESK: The Pell boy went under the roots three days back. The wood keeps what it takes.', 'HESK: The warren mouth is north, over the stream. Rats and worse in there.', 'HESK: Whatever you take from the wood, you keep. That is the only law down there.'],
-        after: ['HESK: You brought him back. Nobody has done that. Nobody.', 'HESK: There are older holloways than the warren. Deeper. When you are ready.'] },
+        after: ['HESK: You brought him back. Nobody has done that. Nobody.', 'HESK: There is a grate on the stream bank, west, that has been shut since my grandfather. It is open now. I did not open it.'],
+        after2: ['HESK: The mere too. The stream runs clearer since. I do not know what you are becoming, but keep at it.'] },
       { idx: 2, name: 'MOTHER PELL', look: { hair: '#6b3f22', skin: '#f2c9a0', tunic: '#8a4a5a', pants: '#8a4a5a', boots: '#3a2a1a', dress: true, accent: '#f7f2e6' },
         lines: ['PELL: He only went to fetch the goat. The goat came back.', 'PELL: If you find him... if you find anything of his...'],
-        after: ['PELL: He is asleep. He will not say what he saw. Thank you. Thank you.'] },
+        after: ['PELL: He is asleep. He will not say what he saw. Thank you. Thank you.'],
+        after2: ['PELL: He talks now. About a pool, and a mask, and a thing with too many teeth. You went there?'] },
+      { idx: 3, name: 'THE PEDLAR', shop: true, look: { hair: '#2a2a2a', skin: '#c98a5a', tunic: '#e0bb65', pants: '#4b3d5c', boots: '#2a2a2a', accent: '#f7f2e6', hat: '#7a3a1a' },
+        lines: ['PEDLAR: Gold from under the roots spends the same as any. What do you need?'], after: ['PEDLAR: The one who came back from the warren. Prices are the same, but I will not haggle with you.'], after2: ['PEDLAR: You have been to the mere. I can smell it. Buy something, it helps.'] },
     ],
     signs: { S: ['ARROWS or WASD to walk. X cuts, hold X for THE HEAVY BLOW.', 'C guards. TAP C as a blow lands to PARRY. Z rolls.', 'SPACE talks and opens. TAB is your pack: skills, charms, the bestiary.'] },
-    exits: { mouth: { to: 'warren', at: 'entry' } },
+    exits: { mouth: { to: 'warren', at: 'entry' }, culvert: { to: 'mere', at: 'entry' } },
     freeCamera: true,
   },
   warren: {
@@ -196,11 +329,24 @@ export const AREAS = {
     rooms: WARREN_ROOMS, chests: WARREN_CHESTS, mounds: WARREN_MOUNDS, signs: WARREN_SIGNS,
     // the door out of H's south wall leads back to the wood, standing under the mouth
     exits: { 'H:s': { to: 'wood', at: 'mouth' } },
-    boss: 'brock', mini: 'digger', keeping: 'THE BROCK\'S HEART',
+    boss: 'brock', mini: 'digger', keeping: 'THE BROCK\'S HEART', verb: 'dig', hazard: 'rock',
+    won: { title: 'THE WARREN IS DONE', lines: ['The Pell boy was in the Brock\'s chamber, under a heap of what the wood had kept: lanterns, a goat bell, a warden\'s cap.', 'He would not say what he saw. You carry him up the throat and out into the light.', 'You kept THE CLAW. You kept THE BROCK\'S HEART. That is the law.'] },
     // the intended route, for the bot and the audit's staged reachability
     route: [
       { room: 'H', do: 'clear' }, { room: 'E', do: 'clear' }, { room: 'B', do: 'clear' }, { room: 'A', do: 'clear' }, { room: 'A', do: 'chest' },
       { room: 'E', do: 'clear' }, { room: 'D', do: 'clear' }, { room: 'F', do: 'clear' }, { room: 'F', do: 'dig', at: 's' }, { room: 'I', do: 'clear' }, { room: 'I', do: 'stairs' },
+    ],
+  },
+  mere: {
+    id: 'mere', name: 'THE MERE', kind: 'holloway', music: 'dark', tint: 'rgba(20,50,90,0.2)',
+    grid: [['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']],
+    rooms: MERE_ROOMS, chests: MERE_CHESTS, mounds: MERE_MOUNDS, signs: {},
+    exits: { 'H:s': { to: 'wood', at: 'culvert' } },
+    boss: 'pike', mini: 'eelwife', keeping: 'THE OLD PIKE\'S HEART', verb: 'swim', hazard: 'spout',
+    won: { title: 'THE MERE IS DONE', lines: ['Under the Pike there was a drowned chapel, and in it, the things the stream had taken for a hundred years: a bell, a ring, a whole cart.', 'And a mask. You leave the mask.', 'You kept THE LUNGS. You kept THE OLD PIKE\'S HEART. That is the law.'] },
+    route: [
+      { room: 'H', do: 'clear' }, { room: 'E', do: 'clear' }, { room: 'B', do: 'clear' }, { room: 'A', do: 'clear' }, { room: 'A', do: 'chest' },
+      { room: 'E', do: 'clear' }, { room: 'D', do: 'clear' }, { room: 'F', do: 'clear' }, { room: 'F', do: 'swim', at: 's' }, { room: 'I', do: 'clear' }, { room: 'I', do: 'stairs' },
     ],
   },
 };
@@ -217,7 +363,7 @@ export function areaRows(a) {
   return rows;
 }
 
-const TILE_CH = { '#': K.WALL, '.': K.FLOOR, '%': K.SOFT, '*': K.MOUND, 'O': K.PIT, ',': K.GRASS, ':': K.DIRT, 'T': K.TREE, 'W': K.WATER, '=': K.PLANK, 'H': K.HOUSE, 'r': K.ROCK, 'b': K.BRAZIER, 'D': K.MOUTH, 'K': K.FLOOR, '^': K.FLOOR };
+const TILE_CH = { '#': K.WALL, '.': K.FLOOR, '%': K.SOFT, '*': K.MOUND, 'O': K.PIT, ',': K.GRASS, ':': K.DIRT, 'T': K.TREE, 'W': K.WATER, '=': K.PLANK, 'H': K.HOUSE, 'r': K.ROCK, 'b': K.BRAZIER, 'D': K.MOUTH, 'K': K.FLOOR, '^': K.FLOOR, '~': K.DEEP, 'V': K.CULVERT };
 
 export function parseArea(a) {
   const rows = areaRows(a);
@@ -246,6 +392,7 @@ export function parseArea(a) {
     else if (ch === '@') ents.push({ kind: 'start', x, y, room: rid });
     else if (ch === '!') ents.push({ kind: 'dripspot', x, y, room: rid });
     else if (ch === 'D') ents.push({ kind: 'mouth', x, y, room: rid });
+    else if (ch === 'V') ents.push({ kind: 'culvert', x, y, room: rid });
     else if (/[1-9]/.test(ch)) { const def = (a.npcs || []).find(n => n.idx === +ch); if (def) ents.push({ kind: 'npc', x, y, room: rid, def }); }
   }
   // the chest tile is a rock for collision purposes; mark it back to floor so the sprite is drawn on earth

@@ -1,21 +1,26 @@
 # HOLLOWAY — next
 
 ## Waiting on Daniel
-- Play the warren end to end on the deployed build. Report in a stream; I work the queue.
-- Feel: walk speed, roll distance, parry window, whether the heavy blow reads. Everything is a constant near
-  the top of `updatePlayer` / `ENEMIES`.
+- Play both holloways on the deployed build. Report in a stream; I work the queue.
+- Feel: walk, roll, parry window, the heavy blow. Swimming speed. Whether "fight the pike from the land" reads
+  without being told.
+- The pedlar's prices. The bottled heart at 60 and mothsilk at 45 are guesses.
 
-## Known and open (round 1)
-- The bot dies to WARREN WARDENS at level 2 (it fights greedily and never guards well). A human with parry
-  and heavy should be fine; measure before touching the warden again.
-- Only one holloway. The overworld is one screen of wood. Hesk's "after" lines promise older holloways.
-- No shop. Gold accumulates with nothing to spend on. A pedlar at the wood's edge is the obvious next thing.
-- No gamepad, no touch controls.
-- The pause menu's tabs switch with LEFT/RIGHT; there is no mouse.
-- Music is one track everywhere. A second, darker loop for the holloway would help the descent.
-- Creature art is procedural silhouettes; a hand-pixelled pass on the Brock and the Digger would pay.
+## Known and open (round 2)
+- The bot beats the warren; in the mere it reaches the pike but does not kill it inside its budget (it never
+  wades in after it, so it waits for surges and snaps). A person will not have that problem, but the pike's
+  heart (460) may still be long. Measure a human time-to-kill before touching it.
+- Wardens (warren) and thornshots in the sluice (mere) are what kill the bot. Both fine for a person with
+  guard and parry, in theory.
+- Room I of the mere: the stairs are ringed by water; you swim to them. Intentional, but check it reads.
+- Gamepad mapping is standard-layout only (A roll, X cut, B guard, Y talk, Start pause, Select pack). Untested
+  on real hardware; the pane has no pad.
+- The Brock and the Digger are hand-pixelled text grids now (`BROCK_DOWN`, `DIGGER_SIDE` in chars.js), the
+  mere's four creatures are still procedural. If the pixel pass reads better, do the pike and the eelwife.
+- Only two music loops: the wood's theme and the descent (both holloways). A third for boss rooms would help.
 
-## Ideas for holloway two
-- THE MERE — a drowned holloway under the stream. Verb from the named creature: THE LUNGS (swim under).
-- THE HIVE — under the old oak; the Hornet Queen's cousins. Verb: THE WINGS (a short glide over pits).
-- Each holloway: a new tile kind for its rule (water, honey), a mini with the verb, a boss with a KEEPING.
+## Holloway three candidates
+- THE HIVE — under the old oak; a hornet queen's cousins. Verb: THE WINGS (a short glide over pits: the
+  warren's pit gallery and the mere's chapel get a second life). Rule: honey slows.
+- THE KILN — the charcoal burners' pit. Verb: THE EMBER (light braziers, burn bramble). Rule: smoke blinds.
+- Each one: a new tile for its rule, a named creature with the verb, a boss with a KEEPING, five landmarks.

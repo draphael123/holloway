@@ -4,7 +4,7 @@ import * as ART from './art.js';
 import * as DA from './dungeon_art.js';
 import * as CH from './chars.js';
 import { text, textW, wrap, fitText } from './font.js';
-import { AREAS, parseArea, roomDoors, K, SOLID, DIGGABLE, CELL_W, CELL_H } from './world.js';
+import { AREAS, parseArea, roomDoors, K, SOLID, DIGGABLE, SWIMMABLE, CELL_W, CELL_H } from './world.js';
 import { boot as audioBoot, sfx, settings as AUD, apply as audioApply, playMusic, stopMusic } from './audio.js';
 
 const BW = 320, BH = 180, TS = 16;
@@ -37,19 +37,35 @@ addEventListener('resize', resize); resize();
 // ---------------------------------------------------------------------------------------------
 const keys = new Set(); let pressed = new Set();
 const KEYS = {
-  up: ['ArrowUp', 'KeyW'], down: ['ArrowDown', 'KeyS'], left: ['ArrowLeft', 'KeyA'], right: ['ArrowRight', 'KeyD'],
-  attack: ['KeyX', 'KeyJ'], guard: ['KeyC', 'KeyL', 'ShiftLeft', 'ShiftRight'], roll: ['KeyZ', 'KeyK'], interact: ['Space', 'Enter', 'KeyE'],
-  menu: ['Tab', 'KeyI'], pause: ['Escape', 'KeyP'], take: ['KeyZ', 'Enter', 'Space', 'KeyX'], back: ['Escape', 'KeyC', 'Backspace'],
+  up: ['ArrowUp', 'KeyW', 'PadUp'], down: ['ArrowDown', 'KeyS', 'PadDown'], left: ['ArrowLeft', 'KeyA', 'PadLeft'], right: ['ArrowRight', 'KeyD', 'PadRight'],
+  attack: ['KeyX', 'KeyJ', 'PadX'], guard: ['KeyC', 'KeyL', 'ShiftLeft', 'ShiftRight', 'PadB', 'PadRB', 'PadLB'], roll: ['KeyZ', 'KeyK', 'PadA'], interact: ['Space', 'Enter', 'KeyE', 'PadY'],
+  menu: ['Tab', 'KeyI', 'PadSelect'], pause: ['Escape', 'KeyP', 'PadStart'], take: ['KeyZ', 'Enter', 'Space', 'KeyX', 'PadA', 'PadX'], back: ['Escape', 'KeyC', 'Backspace', 'PadB'],
 };
+// a gamepad is read every tick and turned into the same virtual codes (A roll / take, X cut, B guard / back, Y talk)
+const PAD_BTN = { 0: 'PadA', 1: 'PadB', 2: 'PadX', 3: 'PadY', 4: 'PadLB', 5: 'PadRB', 8: 'PadSelect', 9: 'PadStart', 12: 'PadUp', 13: 'PadDown', 14: 'PadLeft', 15: 'PadRight' };
+const padDown = new Set(); let padSeen = false;
+function pollPad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : []; let pad = null; for (const p of pads) if (p && p.connected) { pad = p; break; }
+  if (!pad) { if (padDown.size) { for (const c of padDown) keys.delete(c); padDown.clear(); } return; }
+  const now = new Set();
+  for (const i in PAD_BTN) { const b = pad.buttons[i]; if (b && (b.pressed || b.value > 0.5)) now.add(PAD_BTN[i]); }
+  const ax = pad.axes[0] || 0, ay = pad.axes[1] || 0;
+  if (ax < -0.45) now.add('PadLeft'); if (ax > 0.45) now.add('PadRight'); if (ay < -0.45) now.add('PadUp'); if (ay > 0.45) now.add('PadDown');
+  for (const c of now) if (!padDown.has(c)) { keys.add(c); pressed.add(c); if (!padSeen) { padSeen = true; audioBoot(); playMusic(musicUrl(), musicName()); toast('PAD: A ROLLS  X CUTS  B GUARDS  Y TALKS', 3, '#9ad0ff'); } }
+  for (const c of padDown) if (!now.has(c)) keys.delete(c);
+  padDown.clear(); for (const c of now) padDown.add(c);
+}
+const musicUrl = () => (area && area.def.music === 'dark') ? 'audio/descent.ogg' : 'audio/theme.ogg';
+const musicName = () => (area && area.def.music === 'dark') ? 'dark' : 'theme';
 const held = k => KEYS[k].some(c => keys.has(c));
 const press = k => KEYS[k].some(c => pressed.has(c));
 addEventListener('keydown', e => {
-  if (e.repeat) return; keys.add(e.code); pressed.add(e.code); audioBoot(); playMusic('audio/theme.ogg', 'theme');
+  if (e.repeat) return; keys.add(e.code); pressed.add(e.code); audioBoot(); playMusic(musicUrl(), musicName());
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
 });
 addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
-addEventListener('pointerdown', () => { audioBoot(); playMusic('audio/theme.ogg', 'theme'); });
+addEventListener('pointerdown', () => { audioBoot(); playMusic(musicUrl(), musicName()); });
 
 // ---------------------------------------------------------------------------------------------
 // DATA — creatures, skills, charms
@@ -73,7 +89,21 @@ const ENEMIES = {
   brock: { name: 'THE OLD BROCK', hp: 440, spd: 40, r: 18, xp: 200, gold: [30, 50], dmg: 16, aggro: 400, mat: 'flesh', big: true, boss: true,
     blurb: 'The badger the warren was dug for. It charges the length of the room and stuns itself on the wall: that is your window. It shakes the roof down. It goes under.', tells: ['CHARGE', 'SWIPE', 'QUAKE', 'DIG'],
     drops: [{ item: 'keeping', rate: 1 }] },
+  newt: { name: 'MERE NEWT', hp: 18, spd: 74, r: 6, xp: 7, gold: [1, 3], dmg: 7, aggro: 110, mat: 'flesh', swims: true, ai: 'imp', tn: { LUNGE: 'LEAP' },
+    blurb: 'A fat newt with an orange belly. It lives in the water and leaps out of it. You cannot follow it in with a sword.', tells: ['LEAP'],
+    drops: [{ item: 'heart', rate: 0.12 }, { item: 'charm:eelskin', rate: 0.03 }] },
+  drowned: { name: 'THE DROWNED', hp: 52, spd: 26, r: 8, xp: 16, gold: [3, 7], dmg: 12, aggro: 90, mat: 'flesh', ai: 'drowned',
+    blurb: 'Someone the stream took. Slow, and it does not mind the sword much. The grab holds you: roll before the hands close.', tells: ['GRAB'],
+    drops: [{ item: 'heart', rate: 0.18 }, { item: 'charm:mothsilk', rate: 0.04 }] },
+  eelwife: { name: 'THE EELWIFE', hp: 200, spd: 48, r: 12, xp: 80, gold: [15, 25], dmg: 13, aggro: 400, mat: 'flesh', big: true, mini: true, swims: true, ai: 'digger', tn: { BURROW: 'COIL', SWIPE: 'LASH', THROW: 'SPIT' },
+    blurb: 'A great eel wearing a drowned woman\'s mask. It coils under the water and comes up where you stand. Its lungs are the way into the Pike\'s pool.', tells: ['COIL', 'LASH', 'SPIT'],
+    drops: [{ item: 'lungs', rate: 1 }] },
+  pike: { name: 'THE OLD PIKE', hp: 460, spd: 46, r: 20, xp: 260, gold: [40, 60], dmg: 18, aggro: 400, mat: 'flesh', big: true, boss: true, swims: true, ai: 'brock', spray: true, spawn: 'newt', tn: { CHARGE: 'SURGE', SWIPE: 'SNAP', QUAKE: 'SPRAY', DIG: 'SUBMERGE' },
+    blurb: 'The pike the mere was dug for. It surges the length of its pool and beaches itself on the wall: that is your window. It sprays. It goes under. Fight it from the land, it cannot be cut from the water.', tells: ['SURGE', 'SNAP', 'SPRAY', 'SUBMERGE'],
+    drops: [{ item: 'keeping', rate: 1 }] },
 };
+const tn = (e, kind) => (e.def.tn && e.def.tn[kind]) || kind;
+const whoOf = e => e.def.swims ? 'swimmer' : 'enemy';
 const SKILLS = [
   { id: 'blade1', branch: 0, tier: 0, name: 'LONG SWING', desc: 'The sword reaches six more.' },
   { id: 'blade2', branch: 0, tier: 1, name: 'THE THIRD CUT', desc: 'The thrust does double and carries you.' },
@@ -90,7 +120,17 @@ const CHARMS = {
   thornband: { name: 'THORNBAND', col: '#5a9a3a', desc: 'A ring of bramble. Every blow does a little more.' },
   ratfoot: { name: 'RATFOOT', col: '#8a7562', desc: 'Dried and strung. The roll is cheap and quick.' },
   brockhide: { name: 'BROCKHIDE', col: '#7c7c8a', desc: 'A strip of striped hide. You take a fifth less.' },
+  mothsilk: { name: 'MOTHSILK', col: '#e6dcc4', desc: 'Spun by something in the wood. Stamina comes back a third faster.' },
+  eelskin: { name: 'EELSKIN', col: '#4a7a68', desc: 'Slick and cold. You swim a third faster and the dive is cheap.' },
+  pikescale: { name: 'PIKESCALE', col: '#7a9a4a', desc: 'One armoured scale. THE HEAVY BLOW does a quarter more.' },
 };
+// the pedlar's table; `once` items sell one time per save
+const SHOP = [
+  { id: 'cap', name: 'RED CAP', price: 12, desc: 'A mushroom. Eat it now: +30 heart.' },
+  { id: 'bottle', name: 'A BOTTLED HEART', price: 60, desc: '+10 heart, for keeps.', once: true },
+  { id: 'charm:mothsilk', name: 'MOTHSILK', price: 45, desc: 'A charm. Stamina comes back a third faster.', once: true },
+  { id: 'charm:pikescale', name: 'PIKESCALE', price: 80, desc: 'A charm. The heavy blow does a quarter more.', once: true, after: 'mere' },
+];
 const has = id => !!P.skills[id];
 const wearing = id => P.equipped.includes(id);
 
@@ -100,7 +140,8 @@ const wearing = id => P.equipped.includes(id);
 const SPR = {};
 function bakeAll() {
   SPR.hero = CH.bakeHero(); SPR.swords = CH.bakeSwords(); SPR.shield = CH.bakeShield(); SPR.claw = CH.bakeClawHand();
-  SPR.creature = { imp: CH.bakeImp(), rat: CH.bakeRat(), archer: CH.bakeArcher(), warden: CH.bakeWarden(), digger: CH.bakeDigger(), brock: CH.bakeBrock() };
+  SPR.creature = { imp: CH.bakeImp(), rat: CH.bakeRat(), archer: CH.bakeArcher(), warden: CH.bakeWarden(), digger: CH.bakeDigger(), brock: CH.bakeBrock(), newt: CH.bakeNewt(), drowned: CH.bakeDrowned(), eelwife: CH.bakeEelwife(), pike: CH.bakePike() };
+  SPR.ripple = [0, 1, 2].map(f => DA.bakeRipple(f)); SPR.spout = [0, 1, 2].map(f => DA.bakeSpout(f)); SPR.culvert = [DA.bakeCulvert(false), DA.bakeCulvert(true)];
   SPR.arrow = CH.bakeArrow(); SPR.clod = CH.bakeClod();
   SPR.earth = [0, 1, 2, 3].map(i => DA.bakeEarth(11 + i));
   SPR.wall = Array.from({ length: 16 }, (_, m) => [0, 1].map(i => DA.bakeWallTile(50 + i + m * 3, m)));
@@ -115,8 +156,10 @@ function bakeAll() {
   SPR.grass = [0, 1, 2, 3].map(i => ART.bakeGrass(100 + i)); SPR.flowers = [0, 1].map(i => ART.bakeFlowers(300 + i));
   SPR.dirt = Array.from({ length: 16 }, (_, m) => [0, 1].map(i => ART.bakeDirt(400 + i + m * 5, m)));
   SPR.water = Array.from({ length: 16 }, (_, m) => [0, 1, 2, 3].map(f => ART.bakeWater(f, m))); SPR.plank = ART.bakePlank(500);
+  SPR.deep = SPR.water.map(frames => frames.map((w, f) => DA.bakeDeep(w, f)));
+  SPR.lungsIcon = (() => { const [c, g] = canvas(12, 12); g.fillStyle = '#4a7a68'; g.fillRect(1, 3, 4, 8); g.fillRect(7, 3, 4, 8); g.fillStyle = '#7ab6a0'; g.fillRect(2, 4, 2, 3); g.fillRect(8, 4, 2, 3); g.fillStyle = '#e6dcc4'; g.fillRect(5, 1, 2, 6); return outline(c, '#1b1626'); })();
   SPR.trees = [0, 1, 2, 3, 4, 5].map(i => ART.bakeTree(700 + i, i >= 4)); SPR.bush = [0, 1, 2].map(i => ART.bakeBush(800 + i));
-  SPR.signpost = ART.bakeSignpost(); SPR.butterfly = [['#f4d35e', 0], ['#f4d35e', 1], ['#fbf6ea', 0], ['#fbf6ea', 1]].map(([c, f]) => ART.bakeButterfly(f, c));
+  SPR.signpost = ART.bakeSignpost(); SPR.stall = ART.bakeStall('#c9452e'); SPR.butterfly = [['#f4d35e', 0], ['#f4d35e', 1], ['#fbf6ea', 0], ['#fbf6ea', 1]].map(([c, f]) => ART.bakeButterfly(f, c));
   SPR.bubble = outline(fromGrid(['.wwwww.', 'wwwwwww', 'ww.w.ww', 'wwwwwww', '.wwwww.', '..ww...', '..w....'], { w: '#fff8e8' }, 1));
   SPR.house = ART.bakeBuilding({ w: 4, d: 3, H: 28, wall: { lit: '#efe3c8', timber: '#6e4a2e' }, roof: { lite: '#e6c46e', mid: '#c49a3f', dark: '#8a6a2a' }, chimney: true, door: { u: 1.5 }, windows: [{ u: 0.3, v: 10, box: true }, { u: 3.0, v: 10, shutters: true }] });
 }
@@ -139,7 +182,7 @@ function applySettings() { AUD.sfx = PROG.settings.sfx; AUD.music = PROG.setting
 // WORLD STATE
 // ---------------------------------------------------------------------------------------------
 let area = null;              // parsed area + runtime lists
-let enemies = [], props = [], pickups = [], projectiles = [], rocks = [], fx = [], floaters = [], npcs = [], chests = [], mounds = [], signs = [], locks = [], drips = [], stairsAt = null, mouthAt = null;
+let enemies = [], props = [], pickups = [], projectiles = [], rocks = [], fx = [], floaters = [], npcs = [], chests = [], mounds = [], signs = [], locks = [], drips = [], stairsAt = null, mouthAt = null, culvertAt = null;
 let rooms = [], roomById = {}, curRoom = null, sealed = false, roomBanner = { t: 0, name: '' };
 const cam = { x: 0, y: 0, tx: 0, ty: 0, slide: 0, fx: 0, fy: 0 };
 let time = 0, hitstop = 0, shake = 0, slowT = 0;
@@ -164,8 +207,11 @@ function lockAt(tx, ty) { return locks.find(l => l.x === tx && l.y === ty && !l.
 // solid for the player: walls, props, sealed doors, locks (unlocked on touch if you have a key)
 function solidFor(tx, ty, who) {
   const k = tileAt(tx, ty);
+  if (SWIMMABLE.has(k)) return who === 'swimmer' ? false : who === 'enemy' ? true : !P.abilities.lungs;
+  if (k === K.CULVERT) return who !== 'player' || !PROG.quest.warren;
   if (SOLID.has(k)) return true;
   if (who === 'enemy' && (k === K.PIT || k === K.MOUTH)) return true;
+  if (who === 'swimmer' && (k === K.PIT || k === K.MOUTH)) return true;
   if (who === 'enemy' && chests.some(c => c.x === tx && c.y === ty)) return true;
   if (doorSealedAt(tx, ty)) return true;
   if (lockAt(tx, ty)) return true;
@@ -195,7 +241,7 @@ function moveBox(e, dx, dy, hw, hh, who) {
 // ---------------------------------------------------------------------------------------------
 function load(areaId, at = 'start') {
   const def = AREAS[areaId]; area = parseArea(def);
-  enemies = []; props = []; pickups = []; projectiles = []; rocks = []; fx = []; floaters = []; npcs = []; chests = []; mounds = []; signs = []; locks = []; drips = []; stairsAt = null; mouthAt = null;
+  enemies = []; props = []; pickups = []; projectiles = []; rocks = []; fx = []; floaters = []; npcs = []; chests = []; mounds = []; signs = []; locks = []; drips = []; stairsAt = null; mouthAt = null; culvertAt = null;
   rooms = area.rooms; roomById = {}; for (const r of rooms) { r.doors = roomDoors(area, r); roomById[r.id] = r; }
   const rnd = mulberry(77);
   let start = null;
@@ -213,6 +259,7 @@ function load(areaId, at = 'start') {
       case 'start': if (at === 'start' || at === 'entry') start = { x: cx, y: cy - 4 }; break;
       case 'dripspot': drips.push({ x: cx, y: cy - 8, room: e.room }); break;
       case 'mouth': mouthAt = { x: e.x, y: e.y }; if (at === 'mouth' && !start) start = { x: e.x * TS + 16, y: (e.y + 2) * TS + 4 }; break;
+      case 'culvert': if (!culvertAt) { culvertAt = { x: e.x, y: e.y }; if (at === 'culvert' && !start) start = { x: e.x * TS + 16, y: e.y * TS - 4 }; } break;
       case 'npc': npcs.push({ x: cx, y: cy - 2, def: e.def, frames: CH.bakeCharacter(e.def.look), facing: 'down', walk: 0, moving: false, homeX: cx, homeY: cy - 2, wait: 1 + rnd() * 2, tx: cx, ty: cy - 2 }); break;
     }
   }
@@ -225,6 +272,8 @@ function load(areaId, at = 'start') {
   }
   for (const h of (def.houses || [])) props.push({ kind: 'house', x: h.x * TS, y: (h.y + h.d) * TS, spr: SPR.house, house: h });
   if (mouthAt) props.push({ kind: 'mouth', x: mouthAt.x * TS + 16, y: (mouthAt.y + 1) * TS + 2, spr: SPR.mouth, flat: true });
+  if (culvertAt) props.push({ kind: 'culvert', x: culvertAt.x * TS + 16, y: (culvertAt.y + 1) * TS + 2, get spr() { return SPR.culvert[PROG.quest.warren ? 1 : 0]; }, flat: true });
+  for (const n of npcs) if (n.def.shop) props.push({ kind: 'stall', x: n.x, y: n.y - 14, spr: SPR.stall });
   if (!start) start = { x: 8 * TS, y: 8 * TS };
   P.x = start.x; P.y = start.y; P.lastSafe = { x: P.x, y: P.y }; P.facing = def.kind === 'holloway' ? 'up' : 'up';
   P.atk = 0; P.roll = 0; P.guard = false; P.charging = false; P.hold = 0; P.dig = 0; P.stagger = 0; P.inv = 0.5; P.push.x = P.push.y = 0;
@@ -233,7 +282,7 @@ function load(areaId, at = 'start') {
   snapCamera();
   if (def.kind === 'holloway') { PROG.checkpoint = { area: areaId, at: 'entry' }; } else PROG.checkpoint = { area: areaId, at };
   save();
-  playMusic('audio/theme.ogg', 'theme');
+  playMusic(musicUrl(), musicName());
 }
 function spawnEnemy(id, x, y, room, dkey) {
   const d = ENEMIES[id]; const hp = Math.round(d.hp * (1 + 0.06 * (P.keepings || 0)));
@@ -259,8 +308,7 @@ function updateCamera(dt) {
 function enterRoom(r) {
   const prev = curRoom; curRoom = r;
   if (prev && r && prev !== r) { cam.fx = cam.x; cam.fy = cam.y; const t = camTarget(); cam.tx = t.x; cam.ty = t.y; cam.slide = 0.4; state = 'slide'; roomBanner = { t: 2.2, name: r.name }; projectiles = []; rocks = []; P.abuf = 0; }
-  if (r && r.id === area.def.grid[2][2] && !PROG.cleared[`${area.id}:${r.id}`]) { const b = enemies.find(e => e.def.boss && e.alive); if (b) { toast(`${b.def.name}`, 3, '#ff6a3a'); sfx.roar(); shake = 6; } }
-  if (r && r.id === 'D' && !PROG.cleared[`${area.id}:D`]) { const m = enemies.find(e => e.def.mini && e.alive); if (m) { toast(`${m.def.name}`, 2.5, '#ffb347'); sfx.tellBig(); } }
+  if (r) { const b = enemies.find(e => e.def.boss && e.alive && e.room === r.id); if (b) { toast(`${b.def.name}`, 3, '#ff6a3a'); sfx.roar(); shake = 6; } const m = enemies.find(e => e.def.mini && e.alive && e.room === r.id); if (m) { toast(`${m.def.name}`, 2.5, '#ffb347'); sfx.tellBig(); } }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -290,7 +338,9 @@ function updatePlayer(dt) {
   if (P.dead) return;
   // timers
   P.inv = Math.max(0, P.inv - dt); P.flash = Math.max(0, P.flash - dt); P.stagger = Math.max(0, P.stagger - dt); P.riposte = Math.max(0, P.riposte - dt); P.softHint = Math.max(0, P.softHint - dt);
-  P.stDelay = Math.max(0, P.stDelay - dt); if (P.stDelay === 0 && !P.guard) P.st = Math.min(P.maxSt, P.st + dt * 30 * (has('foot3') ? 1.5 : 1));
+  P.stDelay = Math.max(0, P.stDelay - dt); if (P.stDelay === 0 && !P.guard) P.st = Math.min(P.maxSt, P.st + dt * 30 * (has('foot3') ? 1.5 : 1) * (wearing('mothsilk') ? 1.35 : 1));
+  P.swim = SWIMMABLE.has(tileAt(Math.floor(P.x / TS), Math.floor((P.y - 2) / TS)));
+  if (P.swim) { P.charging = false; P.guard = false; P.parryT = 0; if (P.atk > 0) P.atk = 0; }
   if (P.abuf > 0) P.abuf -= dt;
   // movement input
   let mx = 0, my = 0;
@@ -307,8 +357,9 @@ function updatePlayer(dt) {
     if (P.dig <= 0) finishDig();
   } else if (P.stagger > 0) { /* no control */ }
   else {
-    // ---- attack input: buffer it, fire when free ----
-    if (press('attack')) P.abuf = 0.18;
+    // ---- attack input: buffer it, fire when free (never from the water) ----
+    if (press('attack') && !P.swim) P.abuf = 0.18;
+    if (P.swim) P.hold = -1;
     // the hold counts from the press: a cut that you keep holding becomes THE HEAVY BLOW as soon as the cut ends
     if (held('attack') && !P.charging && P.hold >= 0) { P.hold += dt; if (P.hold > 0.3 && P.atk <= 0 && P.st >= 20) { P.charging = true; P.chargeT = 0; sfx.charge(); } }
     if (!held('attack')) { if (P.charging) { releaseHeavy(); } P.hold = 0; }
@@ -321,21 +372,21 @@ function updatePlayer(dt) {
       if (P.atk <= 0) { P.swingEndT = time; P.heavy = false; P.thrust = false; }
       P.moving = false;
     } else {
-      if (P.abuf > 0 && !held('guard')) { const dug = tryDig(); if (!dug) startSwing(); P.abuf = 0; }
+      if (P.abuf > 0 && !held('guard') && !P.swim) { const dug = tryDig(); if (!dug) startSwing(); P.abuf = 0; }
       // ---- guard / parry ----
-      const gHeld = held('guard');
+      const gHeld = held('guard') && !P.swim;
       if (press('guard')) { P.parryT = parryWin(); P.cT = 0; }
       if (gHeld) { P.cT += dt; P.guard = P.cT > 0.12 && P.st > 0; } else P.guard = false;
       P.parryT = Math.max(0, P.parryT - dt);
       if (P.guard) { P.stDelay = Math.max(P.stDelay, 0.2); }
       // ---- roll ----
       if (press('roll') && P.st >= rollCost() * (god ? 0 : 1)) {
-        if (spend(rollCost())) { P.roll = P.rollDur; const a = len ? Math.atan2(my, mx) : FACE_ANG[P.facing]; P.rdx = Math.cos(a); P.rdy = Math.sin(a); if (len) P.facing = faceOf(mx, my); P.guard = false; P.parryT = 0; sfx.roll(); puff(P.x, P.y, 5, '#c9b9a0', 30); }
+        if (spend(P.swim && wearing('eelskin') ? 6 : rollCost())) { P.roll = P.rollDur; const a = len ? Math.atan2(my, mx) : FACE_ANG[P.facing]; P.rdx = Math.cos(a); P.rdy = Math.sin(a); if (len) P.facing = faceOf(mx, my); P.guard = false; P.parryT = 0; sfx.roll(); puff(P.x, P.y, 5, '#c9b9a0', 30); }
       } else if (len) {
-        const sp = 84 * speedMul() * (P.guard ? 0.5 : 1);
+        const sp = 84 * speedMul() * (P.guard ? 0.5 : 1) * (P.swim ? (wearing('eelskin') ? 0.75 : 0.55) : 1);
         moveBox(P, mx * sp * dt, my * sp * dt, P_HW, P_HH, 'player');
         if (!P.guard || true) P.facing = faceOf(mx, my);
-        P.moving = true; P.walk += dt * (P.guard ? 2 : 4); P.stepT -= dt; if (P.stepT <= 0) { P.stepT = 0.26; sfx.step(); puff(P.x - mx * 4, P.y, 1, area.def.kind === 'holloway' ? '#8a6a3f' : '#a4c47a', 8); }
+        P.moving = true; P.walk += dt * (P.guard ? 2 : 4); P.stepT -= dt; if (P.stepT <= 0) { P.stepT = 0.26; if (P.swim) { sfx.roll(); puff(P.x - mx * 4, P.y - 2, 2, '#d6ecf8', 12); } else { sfx.step(); puff(P.x - mx * 4, P.y, 1, area.def.kind === 'holloway' ? '#8a6a3f' : '#a4c47a', 8); } }
       } else P.moving = false;
       // ---- interact ----
       if (press('interact')) interact();
@@ -350,8 +401,12 @@ function updatePlayer(dt) {
   // a lock opens on touch if you carry a key
   for (const side of [[0, -1], [0, 1], [-1, 0], [1, 0]]) { const l = lockAt(tx + side[0], ty + side[1]); if (l && P.keys > 0 && dist(P.x, P.y - 4, (l.x + 0.5) * TS, (l.y + 0.5) * TS) < 14) { P.keys--; l.open = true; PROG.unlocked[l.key] = true; sfx.unlock(); toast('THE LOCK TURNS', 1.6, '#f4d35e'); puff((l.x + 0.5) * TS, (l.y + 0.5) * TS, 6, '#a6733f'); save(); } }
   if (k === K.MOUTH) { changeArea('warren', 'entry'); return; }
+  if (k === K.CULVERT) { changeArea('mere', 'entry'); return; }
+  { const fa = FACE_ANG[P.facing]; const ftx = Math.floor((P.x + Math.cos(fa) * 10) / TS), fty = Math.floor((P.y - 4 + Math.sin(fa) * 10) / TS); const fk = tileAt(ftx, fty);
+    if (fk === K.CULVERT && !PROG.quest.warren && P.softHint <= 0 && P.moving) { toast('THE GRATE IS SHUT. WHATEVER IS UNDER THE WARREN COMES FIRST', 2.5, '#c9b9a0'); P.softHint = 4; }
+    if (SWIMMABLE.has(fk) && !P.abilities.lungs && P.softHint <= 0 && P.moving) { toast('DEEP WATER. SOMETHING WITH LUNGS COULD CROSS THIS', 2.5, '#c9b9a0'); P.softHint = 4; } }
   if (stairsAt && tx === stairsAt.x && ty === stairsAt.y && PROG.cleared[`${area.id}:${stairsAt.room}`]) { finishHolloway(); return; }
-  if (area.def.kind === 'holloway' && curRoom && curRoom.id === 'H' && ty >= curRoom.y + curRoom.h - 1 && P.y > (curRoom.y + curRoom.h) * TS - 4) { changeArea('wood', 'mouth'); return; }
+  if (area.def.kind === 'holloway' && curRoom && curRoom.id === 'H' && ty >= curRoom.y + curRoom.h - 1 && P.y > (curRoom.y + curRoom.h) * TS - 4) { changeArea('wood', area.id === 'mere' ? 'culvert' : 'mouth'); return; }
   // room change
   const r = roomAt(P.x, P.y); if (r && r !== curRoom) enterRoom(r);
   P.idleT = P.moving ? 0 : P.idleT + dt;
@@ -384,7 +439,7 @@ function swingHits() {
     if (e.id === 'warden' && !P.heavy && e.state !== 'stagger' && e.state !== 'stunned') {
       const toP = Math.atan2(P.y - e.y, P.x - e.x); if (Math.abs(angDiff(FACE_ANG[e.facing], toP)) < 1.3) { sfx.hit('wood'); spark(e.x + Math.cos(toP) * 8, e.y - 8, '#c9a56a'); floater(e.x, e.y - 22, 'TURNED', '#c9b9a0'); hitstop = 0.03; continue; }
     }
-    let dmg = baseDmg() * (P.thrust ? (has('blade2') ? 2 : 1.6) : 1) * (P.heavy ? 2.4 : 1) * (P.riposte > 0 ? 2 : 1);
+    let dmg = baseDmg() * (P.thrust ? (has('blade2') ? 2 : 1.6) : 1) * (P.heavy ? 2.4 * (wearing('pikescale') ? 1.25 : 1) : 1) * (P.riposte > 0 ? 2 : 1);
     if (e.state === 'stunned' || e.state === 'recover') dmg *= e.stunMul;
     if (P.riposte > 0) { P.riposte = 0; floater(P.x, P.y - 30, 'RIPOSTE', '#ffd36b'); }
     hurtEnemy(e, Math.round(dmg), ang, P.heavy);
@@ -407,8 +462,8 @@ function killEnemy(e) {
   const gn = e.def.gold[0] + Math.floor(Math.random() * (e.def.gold[1] - e.def.gold[0] + 1));
   for (let i = 0; i < gn; i++) pickups.push({ kind: 'coin', x: e.x, y: e.y - 4, vx: (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 30, z: 0, t: 0 });
   for (const d of e.def.drops) if (Math.random() < d.rate) {
-    if (d.item === 'claw') { giveItem('claw'); }
-    else if (d.item === 'keeping') { pickups.push({ kind: 'keeping', x: e.x, y: e.y - 6, t: 0 }); }
+    if (d.item === 'claw' || d.item === 'lungs') { giveItem(d.item); }
+    else if (d.item === 'keeping') { giveItem('keeping', e.x, e.y); }
     else pickups.push({ kind: d.item.startsWith('charm:') ? 'charm' : d.item, id: d.item.split(':')[1], x: e.x, y: e.y - 6, vx: (Math.random() - 0.5) * 40, vy: -40, z: 0, t: 0 });
   }
 }
@@ -423,13 +478,14 @@ function giveItem(item, atX = P.x, atY = P.y) {
   else if (item === 'key') { P.keys++; sfx.key(); toast('A SMALL KEY', 2, '#f4d35e'); }
   else if (item === 'heart') { P.hp = Math.min(P.maxHp, P.hp + 20); sfx.heart(); floater(atX, atY - 20, '+20', '#ff8a7a'); }
   else if (item === 'claw') { P.abilities.claw = true; sfx.claw(); toast('THE CLAW. HOLD X AT SOFT EARTH TO DIG', 4, '#e6dcc4'); ring(P.x, P.y - 6, 26, '#e6dcc4', 0.6); slowT = 0.8; }
+  else if (item === 'lungs') { P.abilities.lungs = true; sfx.keeping(); toast('THE LUNGS. DEEP WATER IS A ROAD NOW. YOU CANNOT CUT FROM IT', 4.5, '#7ab6a0'); ring(P.x, P.y - 6, 26, '#7ab6a0', 0.6); slowT = 0.8; }
   else if (item === 'keeping') { P.keepings++; P.maxHp += 20; P.hp = P.maxHp; sfx.keeping(); toast(`A KEEPING: ${area.def.keeping || 'A PIECE OF THE WOOD'}. +20 HEART`, 4, '#ff8a7a'); ring(P.x, P.y - 6, 30, '#ff8a7a', 0.8); }
   else if (item.startsWith('charm:')) { const id = item.split(':')[1]; if (!P.charms.includes(id)) { P.charms.push(id); toast(`${CHARMS[id].name}. A CHARM. WEAR IT FROM YOUR PACK (TAB)`, 3.5, CHARMS[id].col); } else { P.gold += 20; floater(atX, atY - 20, 'AGAIN. +20 GOLD', '#f4d35e'); } sfx.chest(); }
   save();
 }
 function interact() {
   const fx_ = P.x + Math.cos(FACE_ANG[P.facing]) * 10, fy_ = P.y - 4 + Math.sin(FACE_ANG[P.facing]) * 10;
-  for (const n of npcs) if (dist(fx_, fy_, n.x, n.y - 6) < 16 || dist(P.x, P.y, n.x, n.y) < 18) { openTalk((PROG.quest.warren ? n.def.after : n.def.lines), n); return; }
+  for (const n of npcs) if (dist(fx_, fy_, n.x, n.y - 6) < 16 || dist(P.x, P.y, n.x, n.y) < 18) { if (n.def.shop) { openShop(n); return; } openTalk(PROG.quest.mere ? (n.def.after2 || n.def.after) : PROG.quest.warren ? n.def.after : n.def.lines, n); return; }
   for (const s of signs) if (dist(P.x, P.y - 4, s.x * TS + 8, s.y * TS + 8) < 20) { openTalk(s.lines, null); return; }
   for (const c of chests) if (!c.open && dist(fx_, fy_, c.x * TS + 8, c.y * TS + 8) < 14) { c.open = true; PROG.opened[c.key] = true; giveItem(c.item, c.x * TS + 8, c.y * TS); puff(c.x * TS + 8, c.y * TS + 4, 6, '#f4d35e', 30); return; }
 }
@@ -485,12 +541,12 @@ function finishHolloway() { PROG.quest[area.id] = true; PROG.cleared[`${area.id}
 // ---------------------------------------------------------------------------------------------
 // ENEMIES — every attack is told. The signature is at the TOP of a chain.
 // ---------------------------------------------------------------------------------------------
-function tell(e, name, dur, kind = 0) { e.state = 'tell'; e.t = dur; e.tellDur = dur; e.tellT = dur; e.tellName = name; e.hitDone = false; e.lockAng = Math.atan2(P.y - 4 - e.y, P.x - e.x); e.facing = faceOfAng(e.lockAng); if (e.def.big) sfx.tellBig(); else sfx.tell(kind); lastTellT = time; }
+function tell(e, name, dur, kind = 0) { e.state = 'tell'; e.t = dur; e.tellDur = dur; e.tellT = dur; e.tellKind = name; e.tellName = tn(e, name); e.hitDone = false; e.lockAng = Math.atan2(P.y - 4 - e.y, P.x - e.x); e.facing = faceOfAng(e.lockAng); if (e.def.big) sfx.tellBig(); else sfx.tell(kind); lastTellT = time; }
 function stepToward(e, tx, ty, sp, dt) {
   const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy); if (d < 1) return;
   const mx = dx / d * sp * dt, my = dy / d * sp * dt; const ox = e.x, oy = e.y;
-  moveBox(e, mx, my, e.r * 0.8, e.r * 0.6, 'enemy');
-  if (Math.abs(e.x - ox) + Math.abs(e.y - oy) < 0.2) { moveBox(e, -my, mx, e.r * 0.8, e.r * 0.6, 'enemy'); }
+  moveBox(e, mx, my, e.r * 0.8, e.r * 0.6, whoOf(e));
+  if (Math.abs(e.x - ox) + Math.abs(e.y - oy) < 0.2) { moveBox(e, -my, mx, e.r * 0.8, e.r * 0.6, whoOf(e)); }
   e.moving = true; e.walk += dt * 6; e.facing = faceOf(dx, dy);
 }
 function separate(e) { for (const o of enemies) { if (o === e || !o.alive || o.state === 'under' || o.room !== e.room) continue; const d = dist(e.x, e.y, o.x, o.y), min = e.r + o.r; if (d < min && d > 0.01) { const k = (min - d) / d * 0.5; e.x += (e.x - o.x) * k; e.y += (e.y - o.y) * k; } } }
@@ -501,7 +557,7 @@ function updateEnemies(dt) {
     if (rid !== null && e.room !== rid) continue;
     if (rid === null && dist(e.x, e.y, P.x, P.y) > 260) continue;
     e.flash = Math.max(0, e.flash - dt); e.moving = false;
-    if (e.push.x || e.push.y) { moveBox(e, e.push.x * dt, e.push.y * dt, e.r * 0.8, e.r * 0.6, 'enemy'); e.push.x *= Math.pow(0.0005, dt); e.push.y *= Math.pow(0.0005, dt); if (Math.abs(e.push.x) < 2) e.push.x = 0; if (Math.abs(e.push.y) < 2) e.push.y = 0; }
+    if (e.push.x || e.push.y) { moveBox(e, e.push.x * dt, e.push.y * dt, e.r * 0.8, e.r * 0.6, whoOf(e)); e.push.x *= Math.pow(0.0005, dt); e.push.y *= Math.pow(0.0005, dt); if (Math.abs(e.push.x) < 2) e.push.x = 0; if (Math.abs(e.push.y) < 2) e.push.y = 0; }
     for (const c in e.cd) e.cd[c] = Math.max(0, e.cd[c] - dt);
     const d = dist(e.x, e.y, P.x, P.y - 4);
     if (!e.aggroed && (d < e.def.aggro || rid !== null)) { e.aggroed = true; if (!PROG.seen[e.id]) { PROG.seen[e.id] = true; toast(`${e.def.name}: SEEN. IT IS IN THE BESTIARY`, 2.2, '#c9b9a0'); } }
@@ -518,8 +574,9 @@ function updateEnemies(dt) {
     }
     // ---- chase & decide ----
     const canTell = time - lastTellT > (e.def.big ? 0 : 0.35);
-    switch (e.id) {
+    switch (e.def.ai || e.id) {
       case 'imp': if (d < 40 && e.cd.a <= 0 && canTell) tell(e, 'LUNGE', 0.4, 0); else if (d > 14) stepToward(e, P.x, P.y - 4, e.def.spd, dt); break;
+      case 'drowned': if (d < 24 && e.cd.a <= 0 && canTell) tell(e, 'GRAB', 0.6, 3); else if (d > 14) stepToward(e, P.x, P.y - 4, e.def.spd, dt); else e.facing = faceOf(P.x - e.x, P.y - 4 - e.y); break;
       case 'rat': if (d < 18 && e.cd.a <= 0 && canTell) tell(e, 'BITE', 0.3, 1); else { const ang = Math.atan2(P.y - 4 - e.y, P.x - e.x) + Math.sin(time * 3 + e.home.x) * 0.8; stepToward(e, e.x + Math.cos(ang) * 20, e.y + Math.sin(ang) * 20, e.def.spd, dt); } break;
       case 'archer': if (d < 60) { const ang = Math.atan2(e.y - (P.y - 4), e.x - P.x); stepToward(e, e.x + Math.cos(ang) * 20, e.y + Math.sin(ang) * 20, e.def.spd, dt); } else if (d < 150 && e.cd.a <= 0 && canTell) tell(e, 'DRAW', 0.6, 2); else if (d >= 150) stepToward(e, P.x, P.y - 4, e.def.spd, dt); else e.facing = faceOf(P.x - e.x, P.y - 4 - e.y); break;
       case 'warden': if (d < 26 && e.cd.a <= 0 && canTell) tell(e, 'SHOVE', 0.45, 3); else if (d > 16) stepToward(e, P.x, P.y - 4, e.def.spd, dt); else e.facing = faceOf(P.x - e.x, P.y - 4 - e.y); break;
@@ -530,7 +587,7 @@ function updateEnemies(dt) {
         else if (d > 24) stepToward(e, P.x, P.y - 4, e.def.spd, dt); else e.facing = faceOf(P.x - e.x, P.y - 4 - e.y);
         break;
       case 'brock': { // signature first: CHARGE
-        if (e.hp <= e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; sfx.roar(); shake = 6; toast('THE OLD BROCK IS ANGRY', 2, '#ff6a3a'); if (!e.spawnedRats) { e.spawnedRats = true; for (let i = 0; i < 2; i++) { const r = spawnEnemy('rat', e.x + (i ? 30 : -30), e.y, e.room, `spawned:${time}:${i}`); r.aggroed = true; enemies.push(r); } } }
+        if (e.hp <= e.maxHp * 0.5 && e.phase === 1) { e.phase = 2; sfx.roar(); shake = 6; toast(`${e.def.name} IS ANGRY`, 2, '#ff6a3a'); if (!e.spawnedRats) { e.spawnedRats = true; for (let i = 0; i < 2; i++) { const r = spawnEnemy(e.def.spawn || 'rat', e.x + (i ? 30 : -30), e.y, e.room, `spawned:${time}:${i}`); r.aggroed = true; enemies.push(r); } } }
         const q = e.phase === 2 ? 0.8 : 1;
         if (d > 60 && e.cd.a <= 0) { e.cd.a = 5; tell(e, 'CHARGE', 0.6 * q, 0); }
         else if (e.cd.c <= 0 && e.hp < e.maxHp * 0.85) { e.cd.c = 8; tell(e, 'QUAKE', 0.7 * q, 3); }
@@ -545,14 +602,16 @@ function updateEnemies(dt) {
   enemies = enemies.filter(e => e.alive || e.deadT > 0);
 }
 function startAttack(e) {
-  const n = e.tellName;
+  const n = e.tellKind;
   if (n === 'LUNGE') { e.cd.a = 1.6; sfx.lunge(); }
   else if (n === 'BITE') { e.cd.a = 1.0; sfx.bite(); }
   else if (n === 'DRAW') { e.cd.a = 2.2; sfx.arrow(); projectiles.push({ kind: 'arrow', x: e.x, y: e.y - 10, vx: Math.cos(e.lockAng) * 150, vy: Math.sin(e.lockAng) * 150, dmg: e.def.dmg, life: 2, ang: e.lockAng, src: e }); e.state = 'recover'; e.t = 0.4; }
   else if (n === 'SHOVE') { e.cd.a = 2.2; sfx.shove(); }
+  else if (n === 'GRAB') { e.cd.a = 2.6; sfx.burrow(); }
   else if (n === 'SWIPE') { sfx.heavy(); }
   else if (n === 'THROW') { sfx.lunge(); for (let i = -1; i <= 1; i++) { const a = e.lockAng + i * 0.35; projectiles.push({ kind: 'clod', x: e.x, y: e.y - 8, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120, dmg: 6, life: 1.6, ang: a, src: e }); } e.state = 'recover'; e.t = 0.6; }
   else if (n === 'CHARGE') { e.state = 'charge'; e.t = 0; sfx.chargeRun(); }
+  else if (n === 'QUAKE' && e.def.spray) { sfx.erupt(); for (let i = -2; i <= 2; i++) { const a = e.lockAng + i * 0.28; projectiles.push({ kind: 'spit', x: e.x, y: e.y - 8, vx: Math.cos(a) * 140, vy: Math.sin(a) * 140, dmg: 8, life: 1.8, ang: a, src: e }); } e.state = 'recover'; e.t = 0.7; e.stunMul = 1; }
   else if (n === 'QUAKE') { sfx.quake(); shake = 7; const r = curRoom; const spots = [];
     const n2 = e.phase === 2 ? 8 : 5;
     for (let i = 0; i < n2; i++) { const tx = r.x + 1 + Math.floor(Math.random() * (r.w - 2)), ty = r.y + 1 + Math.floor(Math.random() * (r.h - 2)); if (tileAt(tx, ty) === K.FLOOR) spots.push({ x: tx * TS + 8, y: ty * TS + 8 }); }
@@ -562,45 +621,47 @@ function startAttack(e) {
   else if (n === 'DIG') { burrow(e, 1.8); }
 }
 function runAttack(e, dt) {
-  const n = e.tellName;
-  if (n === 'LUNGE') { moveBox(e, Math.cos(e.lockAng) * 150 * dt, Math.sin(e.lockAng) * 150 * dt, e.r * 0.8, e.r * 0.6, 'enemy'); if (!e.hitDone && dist(e.x, e.y, P.x, P.y - 4) < e.r + 7) { e.hitDone = true; hitPlayer(e, e.def.dmg, e.x, e.y); } if (e.t > 0.25) { e.state = 'recover'; e.t = 0.35; } }
-  else if (n === 'BITE') { moveBox(e, Math.cos(e.lockAng) * 90 * dt, Math.sin(e.lockAng) * 90 * dt, e.r * 0.8, e.r * 0.6, 'enemy'); if (!e.hitDone && dist(e.x, e.y, P.x, P.y - 4) < e.r + 6) { e.hitDone = true; hitPlayer(e, e.def.dmg, e.x, e.y, 60); } if (e.t > 0.18) { e.state = 'recover'; e.t = 0.3; } }
+  const n = e.tellKind;
+  if (n === 'GRAB') { moveBox(e, Math.cos(e.lockAng) * 70 * dt, Math.sin(e.lockAng) * 70 * dt, e.r * 0.8, e.r * 0.6, whoOf(e)); if (!e.hitDone && dist(e.x, e.y, P.x, P.y - 4) < e.r + 9) { e.hitDone = true; if (hitPlayer(e, e.def.dmg, e.x, e.y, 30)) { P.stagger = Math.max(P.stagger, 0.5); floater(P.x, P.y - 34, 'HELD', '#ff6a3a'); } } if (e.t > 0.3) { e.state = 'recover'; e.t = 0.7; } }
+  else if (n === 'LUNGE') { moveBox(e, Math.cos(e.lockAng) * 150 * dt, Math.sin(e.lockAng) * 150 * dt, e.r * 0.8, e.r * 0.6, whoOf(e)); if (!e.hitDone && dist(e.x, e.y, P.x, P.y - 4) < e.r + 7) { e.hitDone = true; hitPlayer(e, e.def.dmg, e.x, e.y); } if (e.t > 0.25) { e.state = 'recover'; e.t = 0.35; } }
+  else if (n === 'BITE') { moveBox(e, Math.cos(e.lockAng) * 90 * dt, Math.sin(e.lockAng) * 90 * dt, e.r * 0.8, e.r * 0.6, whoOf(e)); if (!e.hitDone && dist(e.x, e.y, P.x, P.y - 4) < e.r + 6) { e.hitDone = true; hitPlayer(e, e.def.dmg, e.x, e.y, 60); } if (e.t > 0.18) { e.state = 'recover'; e.t = 0.3; } }
   else if (n === 'SHOVE') { if (!e.hitDone && e.t > 0.05 && inSector(e.x, e.y, e.lockAng, 26, 0.9, P.x, P.y - 4, 5)) { e.hitDone = true; hitPlayer(e, e.def.dmg, e.x, e.y, 200); } if (e.t > 0.22) { e.state = 'recover'; e.t = 0.5; } }
-  else if (n === 'SWIPE') { const r = e.id === 'brock' ? 36 : 30; if (!e.hitDone && e.t > 0.06 && inSector(e.x, e.y, e.lockAng, r, 1.2, P.x, P.y - 4, 5)) { e.hitDone = true; hitPlayer(e, e.def.dmg, e.x, e.y, 180); } if (e.t > 0.24) { e.state = 'recover'; e.t = 0.5; } }
+  else if (n === 'SWIPE') { const r = e.def.boss ? 38 : 30; if (!e.hitDone && e.t > 0.06 && inSector(e.x, e.y, e.lockAng, r, 1.2, P.x, P.y - 4, 5)) { e.hitDone = true; hitPlayer(e, e.def.dmg, e.x, e.y, 180); } if (e.t > 0.24) { e.state = 'recover'; e.t = 0.5; } }
   else { e.state = 'recover'; e.t = 0.3; }
 }
-function burrow(e, dur) { e.state = 'under'; e.t = dur; e.under = dur; sfx.burrow(); puff(e.x, e.y, 12, '#8a6a3f', 50); }
+const dirtOf = e => e.def.swims ? '#5d9be0' : '#8a6a3f';
+function burrow(e, dur) { e.state = 'under'; e.t = dur; e.under = dur; sfx.burrow(); puff(e.x, e.y, 12, dirtOf(e), 50); }
 function runUnder(e, dt) {
   e.t -= dt; stepToward(e, P.x, P.y - 4, e.def.spd * 1.6, dt); e.moving = false;
-  if (Math.random() < 0.5) puff(e.x, e.y, 1, '#8a6a3f', 20);
+  if (Math.random() < 0.5) puff(e.x, e.y, 1, dirtOf(e), 20);
   if (e.t <= 0) { e.state = 'mark'; e.t = 0.6; e.mark = { x: P.x, y: P.y - 2 }; e.x = e.mark.x; e.y = e.mark.y + 2; }
 }
 function erupt(e) {
-  sfx.erupt(); shake = Math.max(shake, 4); puff(e.x, e.y, 16, '#8a6a3f', 70);
-  if (dist(e.x, e.y, P.x, P.y - 4) < (e.id === 'brock' ? 22 : 16) + 5) hitPlayer(e, e.id === 'brock' ? 14 : 14, e.x, e.y, 160);
-  e.state = 'recover'; e.t = e.id === 'brock' ? 0.9 : 1.1; e.stunMul = 1.5; e.mark = null; e.facing = faceOf(P.x - e.x, P.y - 4 - e.y);
+  sfx.erupt(); shake = Math.max(shake, 4); puff(e.x, e.y, 16, dirtOf(e), 70);
+  if (dist(e.x, e.y, P.x, P.y - 4) < (e.def.boss ? 22 : 16) + 5) hitPlayer(e, 14, e.x, e.y, 160);
+  e.state = 'recover'; e.t = e.def.boss ? 0.9 : 1.1; e.stunMul = 1.5; e.mark = null; e.facing = faceOf(P.x - e.x, P.y - 4 - e.y);
 }
 function runCharge(e, dt) {
   e.t += dt; const sp = 230; const ox = e.x, oy = e.y;
-  moveBox(e, Math.cos(e.lockAng) * sp * dt, Math.sin(e.lockAng) * sp * dt, e.r * 0.8, e.r * 0.6, 'enemy');
-  e.moving = true; e.walk += dt * 10; if (Math.random() < 0.7) puff(e.x - Math.cos(e.lockAng) * 10, e.y, 1, '#8a6a3f', 20);
+  moveBox(e, Math.cos(e.lockAng) * sp * dt, Math.sin(e.lockAng) * sp * dt, e.r * 0.8, e.r * 0.6, whoOf(e));
+  e.moving = true; e.walk += dt * 10; if (Math.random() < 0.7) puff(e.x - Math.cos(e.lockAng) * 10, e.y, 1, dirtOf(e), 20);
   if (!e.hitDone && dist(e.x, e.y, P.x, P.y - 4) < e.r + 8) { e.hitDone = true; hitPlayer(e, 18, e.x, e.y, 260); }
   const moved = Math.abs(e.x - ox) + Math.abs(e.y - oy);
   if (moved < sp * dt * 0.3 || e.t > 2.5) { // the wall: stunned, and OPEN
     e.state = 'stunned'; e.t = 1.7; e.stunMul = 2; sfx.wallHit(); shake = 6; puff(e.x + Math.cos(e.lockAng) * 14, e.y, 12, '#5f5468', 60); floater(e.x, e.y - 40, 'STUNNED', '#ffd36b');
-    for (let i = 0; i < 2; i++) rocks.push({ x: e.x + (Math.random() - 0.5) * 60, y: e.y + (Math.random() - 0.5) * 40, t: 0, mark: 0.7, dmg: 8, r: 10 });
+    if (!e.def.swims) for (let i = 0; i < 2; i++) rocks.push({ x: e.x + (Math.random() - 0.5) * 60, y: e.y + (Math.random() - 0.5) * 40, t: 0, mark: 0.7, dmg: 8, r: 10 });
   }
 }
 function updateProjectiles(dt) {
   for (const p of projectiles) {
     p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
-    const tx = Math.floor(p.x / TS), ty = Math.floor(p.y / TS); if (SOLID.has(tileAt(tx, ty)) || tileAt(tx, ty) === K.WALL) { p.life = 0; puff(p.x, p.y, 3, p.kind === 'arrow' ? '#a6733f' : '#6e5330', 30); }
+    const tx = Math.floor(p.x / TS), ty = Math.floor(p.y / TS); const pk = tileAt(tx, ty); if (SOLID.has(pk) && !SWIMMABLE.has(pk)) { p.life = 0; puff(p.x, p.y, 3, p.kind === 'arrow' ? '#a6733f' : p.kind === 'spit' ? '#7ab6a0' : '#6e5330', 30); }
     if (p.life > 0 && dist(p.x, p.y, P.x, P.y - 6) < 8) { const took = hitPlayer(p.src, p.dmg, p.x - p.vx * 0.1, p.y - p.vy * 0.1, 90, p.kind); p.life = 0; if (!took) puff(p.x, p.y, 3, '#c9b9a0', 30); }
   }
   projectiles = projectiles.filter(p => p.life > 0);
   for (const r of rocks) {
     r.t += dt;
-    if (r.t >= r.mark && !r.done) { r.done = true; sfx.rock(); shake = Math.max(shake, 2); puff(r.x, r.y, 6, '#5f5468', 50); if (dist(r.x, r.y, P.x, P.y - 4) < r.r + 5) hitPlayer(null, r.dmg, r.x, r.y - 10, 100, 'FALLING ROCK'); r.t = r.mark; r.gone = 0.3; }
+    if (r.t >= r.mark && !r.done) { r.done = true; const spout = area.def.hazard === 'spout'; if (spout) sfx.erupt(); else sfx.rock(); shake = Math.max(shake, 2); puff(r.x, r.y, 6, spout ? '#d6ecf8' : '#5f5468', 50); if (dist(r.x, r.y, P.x, P.y - 4) < r.r + 5) hitPlayer(null, r.dmg, r.x, r.y - 10, 100, 'FALLING ROCK'); r.t = r.mark; r.gone = 0.3; }
     if (r.done) { r.gone -= dt; }
   }
   rocks = rocks.filter(r => !(r.done && r.gone <= 0));
@@ -613,12 +674,13 @@ let dripT = 1;
 function updatePickups(dt) {
   for (const p of pickups) {
     p.t += dt;
-    if (p.vx !== undefined) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 160 * dt; p.vx *= Math.pow(0.05, dt); if (p.t > 0.35) { p.vx = 0; p.vy = 0; } if (SOLID.has(tileAt(Math.floor(p.x / TS), Math.floor(p.y / TS)))) { p.x -= p.vx * dt * 2; p.y -= p.vy * dt * 2; p.vx = p.vy = 0; } }
+    if (p.vx !== undefined) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 160 * dt; p.vx *= Math.pow(0.05, dt); if (p.t > 0.35) { p.vx = 0; p.vy = 0; } const pk = tileAt(Math.floor(p.x / TS), Math.floor(p.y / TS)); if (SOLID.has(pk) && !SWIMMABLE.has(pk)) { p.x -= p.vx * dt * 2; p.y -= p.vy * dt * 2; p.vx = p.vy = 0; } }
     const d = dist(p.x, p.y, P.x, P.y - 4);
     if (p.t > 0.3 && d < 26 && !P.dead) { const k = 1 - Math.pow(0.001, dt); p.x += (P.x - p.x) * k * 1.5; p.y += (P.y - 4 - p.y) * k * 1.5; }
     if (p.t > 0.3 && d < 8 && !P.dead) { p.gone = true;
       if (p.kind === 'coin') { P.gold++; sfx.coin(); floater(P.x, P.y - 22, `${P.gold}`, '#f4d35e'); }
       else if (p.kind === 'heart') giveItem('heart'); else if (p.kind === 'charm') giveItem('charm:' + p.id); else if (p.kind === 'keeping') giveItem('keeping'); }
+    if (p.vx !== undefined && SWIMMABLE.has(tileAt(Math.floor(p.x / TS), Math.floor(p.y / TS))) && p.t > 0.4 && !P.abilities.lungs) { p.x += (P.x - p.x) * dt * 2; p.y += (P.y - 4 - p.y) * dt * 2; }
   }
   pickups = pickups.filter(p => !p.gone);
 }
@@ -656,8 +718,34 @@ function updateFx(dt) {
 // ---------------------------------------------------------------------------------------------
 // TALK
 // ---------------------------------------------------------------------------------------------
+function openShop(npc) { npc.facing = faceOf(P.x - npc.x, P.y - npc.y); const line = PROG.quest.mere ? npc.def.after2[0] : PROG.quest.warren ? npc.def.after[0] : npc.def.lines[0]; talk = { lines: [line], i: 0, shown: 0, npc, thenShop: true }; state = 'talk'; }
+const shopItems = () => SHOP.filter(it => !it.after || PROG.quest[it.after]);
+function updateShop() {
+  const items = shopItems();
+  if (press('back') || press('pause') || press('menu')) { sfx.back(); state = 'play'; return; }
+  if (press('up')) { menu.sel = (menu.sel + items.length - 1) % items.length; sfx.menu(); }
+  if (press('down')) { menu.sel = (menu.sel + 1) % items.length; sfx.menu(); }
+  if (press('take')) {
+    const it = items[menu.sel]; const sold = it.once && PROG.bought && PROG.bought[it.id];
+    if (sold) { sfx.back(); return; }
+    if (P.gold < it.price) { sfx.back(); toast('NOT ENOUGH GOLD', 1.5, '#ff6a3a'); return; }
+    if (it.id === 'charm:mothsilk' && P.charms.includes('mothsilk')) { sfx.back(); toast('YOU HAVE ONE', 1.5, '#c9b9a0'); return; }
+    if (it.id === 'charm:pikescale' && P.charms.includes('pikescale')) { sfx.back(); toast('YOU HAVE ONE', 1.5, '#c9b9a0'); return; }
+    P.gold -= it.price; PROG.bought = PROG.bought || {}; if (it.once) PROG.bought[it.id] = true; sfx.coin();
+    if (it.id === 'cap') { P.hp = Math.min(P.maxHp, P.hp + 30); sfx.heart(); floater(P.x, P.y - 22, '+30', '#ff8a7a'); }
+    else if (it.id === 'bottle') { P.maxHp += 10; P.hp = Math.min(P.maxHp, P.hp + 10); sfx.keeping(); toast('+10 HEART, FOR KEEPS', 2, '#ff8a7a'); }
+    else if (it.id.startsWith('charm:')) giveItem(it.id);
+    save();
+  }
+}
+function drawShop() {
+  const items = shopItems(); const w = 220, h = 30 + items.length * 20; const x = BW / 2 - w / 2, y = 20;
+  plate(x, y, w, h, 'rgba(10,8,20,0.92)'); text(g, 'THE PEDLAR', x + 8, y + 5, '#ffd36b'); text(g, `${P.gold} GOLD`, x + w - 8, y + 5, '#f4d35e', 1, 'r');
+  items.forEach((it, i) => { const sel = i === menu.sel; const sold = it.once && PROG.bought && PROG.bought[it.id]; const yy = y + 16 + i * 20; plate(x + 4, yy, w - 8, 18, sel ? 'rgba(60,50,90,0.9)' : 'rgba(20,14,30,0.6)'); text(g, it.name, x + 10, yy + 3, sold ? '#5a4a6a' : P.gold >= it.price ? '#f4f0e6' : '#8a7a9a'); text(g, sold ? 'SOLD' : `${it.price}`, x + w - 12, yy + 3, sold ? '#5a4a6a' : '#f4d35e', 1, 'r'); text(g, fitText(it.desc, w - 24), x + 10, yy + 11, '#c9b9a0'); });
+  text(g, 'Z BUYS   ESC LEAVES', BW / 2, y + h + 4, '#5a4a6a', 1, 'c');
+}
 function openTalk(lines, npc) { talk = { lines, i: 0, shown: 0, npc }; state = 'talk'; if (tut && npc) tut.talked = true; if (npc) npc.facing = faceOf(P.x - npc.x, P.y - npc.y); P.moving = false; }
-function updateTalk(dt) { talk.shown = Math.min(talk.lines[talk.i].length, talk.shown + dt * 45); if (press('take')) { if (talk.shown < talk.lines[talk.i].length) talk.shown = 999; else { talk.i++; talk.shown = 0; if (talk.i >= talk.lines.length) { talk = null; state = 'play'; } } } }
+function updateTalk(dt) { talk.shown = Math.min(talk.lines[talk.i].length, talk.shown + dt * 45); if (press('take')) { if (talk.shown < talk.lines[talk.i].length) talk.shown = 999; else { talk.i++; talk.shown = 0; if (talk.i >= talk.lines.length) { const shop = talk.thenShop; talk = null; state = shop ? 'shop' : 'play'; if (shop) menu.sel = 0; } } } }
 
 // ---------------------------------------------------------------------------------------------
 // UPDATE
@@ -675,8 +763,9 @@ function update(rawDt) {
     case 'slide': updateCamera(rawDt); updateFx(dt); break;
     case 'talk': updateTalk(rawDt); updateFx(dt); updateNpcs(dt); break;
     case 'pause': updatePause(); updateFx(dt); break;
+    case 'shop': updateShop(); updateFx(dt); updateNpcs(dt); break;
     case 'dead': deadT += rawDt; updateFx(dt); if (deadT > 1.2 && press('take')) respawn(); break;
-    case 'won': wonT += rawDt; updateFx(dt); if (wonT > 2 && press('take')) { changeArea('wood', 'mouth'); } break;
+    case 'won': wonT += rawDt; updateFx(dt); if (wonT > 2 && press('take')) { changeArea('wood', area.id === 'mere' ? 'culvert' : 'mouth'); } break;
   }
   pressed = new Set();
 }
@@ -764,7 +853,7 @@ function drawTiles(ox, oy) {
   const pitMask = (x, y) => { let m = 0; if (tileAt(x, y - 1) !== K.PIT) m |= 1; if (tileAt(x + 1, y) !== K.PIT) m |= 2; if (tileAt(x, y + 1) !== K.PIT) m |= 4; if (tileAt(x - 1, y) !== K.PIT) m |= 8; return m; };
   const grassy = k => k === K.GRASS || k === K.TREE || k === K.HOUSE || k === K.ROCK || k === K.MOUTH;
   const dirtMask = (x, y) => { let m = 0; if (grassy(tileAt(x, y - 1))) m |= 1; if (grassy(tileAt(x + 1, y))) m |= 2; if (grassy(tileAt(x, y + 1))) m |= 4; if (grassy(tileAt(x - 1, y))) m |= 8; return m; };
-  const waterMask = (x, y) => { let m = 0; const w = k => k === K.WATER || k === K.PLANK; if (!w(tileAt(x, y - 1))) m |= 1; if (!w(tileAt(x + 1, y))) m |= 2; if (!w(tileAt(x, y + 1))) m |= 4; if (!w(tileAt(x - 1, y))) m |= 8; return m; };
+  const waterMask = (x, y) => { let m = 0; const w = k => k === K.WATER || k === K.PLANK || k === K.DEEP || k === K.CULVERT; if (!w(tileAt(x, y - 1))) m |= 1; if (!w(tileAt(x + 1, y))) m |= 2; if (!w(tileAt(x, y + 1))) m |= 4; if (!w(tileAt(x - 1, y))) m |= 8; return m; };
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const k = tileAt(x, y); const sx = ox + x * TS, sy = oy + y * TS; const v = (x * 7 + y * 13) & 1;
     let spr = null;
@@ -776,7 +865,8 @@ function drawTiles(ox, oy) {
       case K.PIT: spr = SPR.pit[pitMask(x, y)]; break;
       case K.GRASS: case K.TREE: case K.HOUSE: case K.MOUTH: spr = ((x * 11 + y * 7) % 17 === 0) ? SPR.flowers[v] : SPR.grass[(x * 3 + y * 5) & 3]; break;
       case K.DIRT: spr = SPR.dirt[dirtMask(x, y)][v]; break;
-      case K.WATER: spr = SPR.water[waterMask(x, y)][wf]; break;
+      case K.WATER: case K.CULVERT: spr = SPR.water[waterMask(x, y)][wf]; break;
+      case K.DEEP: spr = SPR.deep[waterMask(x, y)][wf]; break;
       case K.PLANK: spr = SPR.plank; break;
     }
     if (spr) g.drawImage(spr, sx, sy);
@@ -793,7 +883,8 @@ function drawEnemy(e, ox, oy) {
   const fr = frames[fi]; const sx = ox + Math.round(e.x), sy = oy + Math.round(e.y);
   if (!e.alive) { g.globalAlpha = Math.max(0, e.deadT / 0.6); g.save(); g.translate(sx, sy); g.rotate((1 - e.deadT / 0.6) * Math.PI / 2 * (e.facing === 'left' ? -1 : 1)); g.drawImage(fr.canvas, -fr.ax, -fr.ay); g.restore(); g.globalAlpha = 1; return; }
   if (e.state === 'under') return;
-  g.drawImage(e.def.big ? SPR.shadowBig : SPR.shadow, sx - (e.def.big ? 12 : 7), sy - 3);
+  const inWater = e.def.swims && SWIMMABLE.has(tileAt(Math.floor(e.x / TS), Math.floor((e.y - 2) / TS)));
+  if (inWater) { const rp = SPR.ripple[(Math.floor(time * 4) + (e.def.big ? 2 : 0)) % 3]; g.drawImage(rp.canvas, sx - rp.ax, sy - rp.ay - 1); if (e.def.big) g.drawImage(rp.canvas, sx - rp.ax - 8, sy - rp.ay + 1); } else g.drawImage(e.def.big ? SPR.shadowBig : SPR.shadow, sx - (e.def.big ? 12 : 7), sy - 3);
   const bob = (e.moving && fi === 1) ? -1 : 0;
   if (e.state === 'tell') { const p = 0.35 + 0.45 * Math.abs(Math.sin(time * 18)); drawTellRim(fr.canvas, sx - fr.ax, sy - fr.ay + bob, p); }
   g.drawImage(fr.canvas, sx - fr.ax, sy - fr.ay + bob);
@@ -804,8 +895,9 @@ function drawEnemy(e, ox, oy) {
 function drawHero(ox, oy) {
   const set = SPR.hero[P.facing]; const phase = Math.floor(P.walk * 2) % 4; const fr = P.moving ? set[[0, 1, 0, 2][phase]] : set[0];
   const sx = ox + Math.round(P.x), sy = oy + Math.round(P.y);
-  g.drawImage(SPR.shadow, sx - 7, sy - 3);
+  if (P.swim) { const rp = SPR.ripple[Math.floor(time * 4) % 3]; g.drawImage(rp.canvas, sx - rp.ax, sy - rp.ay - 1); } else g.drawImage(SPR.shadow, sx - 7, sy - 3);
   if (P.inv > 0 && !P.dead && Math.floor(time * 24) % 2 === 0 && P.roll <= 0) g.globalAlpha = 0.45;
+  if (P.swim && !P.dead && P.roll <= 0) { const bob = Math.round(Math.sin(time * 5)); const cut = 9; g.drawImage(fr.canvas, 0, 0, fr.canvas.width, fr.canvas.height - cut, sx - fr.ax, sy - fr.ay + bob + 4, fr.canvas.width, fr.canvas.height - cut); g.globalAlpha = 1; return; }
   const ang = FACE_ANG[P.facing];
   const behind = P.facing === 'up';
   const drawSword = () => {
@@ -856,8 +948,8 @@ function render() {
   objs.sort((a, b) => a.y - b.y || a.x - b.x);
   for (const o of objs) o.draw();
   // projectiles, rocks, fx
-  for (const p of projectiles) { if (p.kind === 'arrow') { const i = ((Math.round(p.ang / (Math.PI / 4)) % 8) + 8) % 8; g.drawImage(SPR.arrow[i], ox + Math.round(p.x) - 7, oy + Math.round(p.y) - 7); } else g.drawImage(SPR.clod, ox + Math.round(p.x) - 4, oy + Math.round(p.y) - 4); }
-  for (const r of rocks) if (!r.done) { const h = (1 - r.t / r.mark) * 90; g.drawImage(SPR.fallRock, ox + Math.round(r.x) - 6, oy + Math.round(r.y - h) - 12); }
+  for (const p of projectiles) { if (p.kind === 'arrow') { const i = ((Math.round(p.ang / (Math.PI / 4)) % 8) + 8) % 8; g.drawImage(SPR.arrow[i], ox + Math.round(p.x) - 7, oy + Math.round(p.y) - 7); } else if (p.kind === 'spit') { g.fillStyle = '#7ab6a0'; g.fillRect(ox + Math.round(p.x) - 2, oy + Math.round(p.y) - 2, 4, 4); g.fillStyle = '#d6ecf8'; g.fillRect(ox + Math.round(p.x) - 1, oy + Math.round(p.y) - 1, 1, 1); } else g.drawImage(SPR.clod, ox + Math.round(p.x) - 4, oy + Math.round(p.y) - 4); }
+  for (const r of rocks) { if (area.def.hazard === 'spout') { if (r.done) { const s = SPR.spout[Math.floor(time * 12) % 3]; g.globalAlpha = Math.max(0, r.gone / 0.3); g.drawImage(s.canvas, ox + Math.round(r.x - s.ax), oy + Math.round(r.y - s.ay)); g.globalAlpha = 1; } } else if (!r.done) { const h = (1 - r.t / r.mark) * 90; g.drawImage(SPR.fallRock, ox + Math.round(r.x) - 6, oy + Math.round(r.y - h) - 12); } }
   for (const f of fx) {
     if (f.kind === 'dot') { g.fillStyle = f.col; g.fillRect(ox + Math.round(f.x), oy + Math.round(f.y), Math.round(f.r), Math.round(f.r)); }
     else if (f.kind === 'spark') { g.fillStyle = f.col; g.fillRect(ox + Math.round(f.x), oy + Math.round(f.y), 2, 2); }
@@ -868,7 +960,7 @@ function render() {
   }
   // darkness and firelight in a holloway
   if (area.def.kind === 'holloway') {
-    g.fillStyle = 'rgba(8,6,16,0.28)'; g.fillRect(0, 0, BW, BH);
+    g.fillStyle = area.def.tint || 'rgba(8,6,16,0.28)'; g.fillRect(0, 0, BW, BH); if (area.def.tint) { g.fillStyle = 'rgba(8,6,16,0.16)'; g.fillRect(0, 0, BW, BH); }
     g.globalCompositeOperation = 'lighter';
     for (const p of props) if (p.kind === 'brazier') { const cx = ox + p.x, cy = oy + p.y - 14; const r = 40 + Math.sin(time * 9 + p.x) * 3; const gr = g.createRadialGradient(cx, cy, 2, cx, cy, r); gr.addColorStop(0, 'rgba(255,170,70,0.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(cx - r, cy - r, r * 2, r * 2); }
     g.globalCompositeOperation = 'source-over';
@@ -878,6 +970,7 @@ function render() {
   drawHud();
   if (state === 'talk') drawTalk();
   if (state === 'pause') drawPause();
+  if (state === 'shop') drawShop();
   if (state === 'dead') drawDead();
   if (state === 'won') drawWon();
   present();
@@ -897,6 +990,7 @@ function drawHud() {
   plate(BW - 64, 4, 60, 12); g.drawImage(SPR.coin[0], BW - 61, 6); text(g, `${P.gold}`, BW - 51, 8, '#f4d35e');
   if (P.keys) { g.drawImage(SPR.key, BW - 34, 6); text(g, `${P.keys}`, BW - 21, 8, '#f4d35e'); }
   if (P.abilities.claw) { g.drawImage(SPR.clawIcon, BW - 16, 6); }
+  if (P.abilities.lungs) { g.drawImage(SPR.lungsIcon, BW - 16, 20); }
   if (P.pts > 0 && Math.floor(time * 2) % 2) text(g, `${P.pts} POINT${P.pts > 1 ? 'S' : ''} (TAB)`, BW - 4, 20, '#9ad0ff', 1, 'r', '#1b1626');
   for (let i = 0; i < 2; i++) { const id = P.equipped[i]; if (id) g.drawImage(SPR.charm[id], 4 + i * 12, 36); }
   // room / area banner
@@ -954,7 +1048,7 @@ function drawPause() {
   if (tab === 'STATUS') {
     const rows = [['LEVEL', P.lvl], ['HEART', `${Math.ceil(P.hp)} / ${P.maxHp}`], ['STAMINA', P.maxSt], ['MIGHT', P.might], ['XP', `${P.xp} / ${xpNeed(P.lvl)}`], ['GOLD', P.gold], ['KEYS', P.keys], ['KEEPINGS', P.keepings], ['POINTS', P.pts]];
     rows.forEach(([k, v], i) => { text(g, k, 22, y0 + i * 9, '#c9b9a0'); text(g, String(v), 100, y0 + i * 9, '#f4f0e6'); });
-    text(g, 'ABILITIES', 160, y0, '#c9b9a0'); let yy = y0 + 9; if (P.abilities.claw) { g.drawImage(SPR.clawIcon, 160, yy); text(g, 'THE CLAW: HOLD X AT SOFT EARTH', 174, yy + 3, '#f4f0e6'); yy += 12; } else text(g, 'NONE YET. THE WOOD HAS THEM', 160, yy, '#5a4a6a');
+    text(g, 'ABILITIES', 160, y0, '#c9b9a0'); let yy = y0 + 9; if (P.abilities.claw) { g.drawImage(SPR.clawIcon, 160, yy); text(g, 'THE CLAW: HOLD X AT SOFT EARTH', 174, yy + 3, '#f4f0e6'); yy += 12; } if (P.abilities.lungs) { g.drawImage(SPR.lungsIcon, 160, yy); text(g, 'THE LUNGS: WALK INTO DEEP WATER', 174, yy + 3, '#f4f0e6'); yy += 12; } if (!P.abilities.claw && !P.abilities.lungs) text(g, 'NONE YET. THE WOOD HAS THEM', 160, yy, '#5a4a6a');
     text(g, 'THE WOOD KEEPS WHAT IT TAKES.', 160, BH - 40, '#5a4a6a'); text(g, 'WHAT YOU TAKE FROM THE WOOD, YOU KEEP.', 160, BH - 33, '#5a4a6a');
   } else if (tab === 'SKILLS') {
     text(g, `${P.pts} POINT${P.pts === 1 ? '' : 'S'} TO SPEND`, BW - 18, y0 - 2, '#9ad0ff', 1, 'r');
@@ -977,13 +1071,13 @@ function drawPause() {
   }
 }
 function drawDead() { g.fillStyle = `rgba(20,4,8,${Math.min(0.7, deadT * 0.6)})`; g.fillRect(0, 0, BW, BH); if (deadT > 0.6) { text(g, 'THE WOOD KEEPS YOU', BW / 2, 70, '#ff6a3a', 2, 'c', '#1b1626'); text(g, `TAKEN BY ${P.lastHurtBy}`, BW / 2, 92, '#c9b9a0', 1, 'c'); if (deadT > 1.2 && Math.floor(time * 3) % 2 === 0) text(g, 'Z: BACK TO THE LAST SAFE PLACE', BW / 2, 112, '#f4f0e6', 1, 'c'); } }
-function drawWon() { g.fillStyle = `rgba(4,8,20,${Math.min(0.8, wonT * 0.6)})`; g.fillRect(0, 0, BW, BH); if (wonT > 0.5) { text(g, 'THE WARREN IS DONE', BW / 2, 50, '#ffd36b', 2, 'c', '#1b1626'); const lines = ['The Pell boy was in the Brock\'s chamber, under a heap of what the wood had kept: lanterns, a goat bell, a warden\'s cap.', 'He would not say what he saw. You carry him up the throat and out into the light.', 'You kept THE CLAW. You kept THE BROCK\'S HEART. That is the law.']; let yy = 72; for (const l of lines) for (const w of wrap(l, BW - 60)) { text(g, w, BW / 2, yy, '#f4f0e6', 1, 'c'); yy += 8; } if (wonT > 2 && Math.floor(time * 3) % 2 === 0) text(g, 'Z: UP INTO THE WOOD', BW / 2, BH - 20, '#9ad0ff', 1, 'c'); } }
+function drawWon() { g.fillStyle = `rgba(4,8,20,${Math.min(0.8, wonT * 0.6)})`; g.fillRect(0, 0, BW, BH); if (wonT > 0.5) { const wc = area.def.won || { title: 'IT IS DONE', lines: [] }; text(g, wc.title, BW / 2, 50, '#ffd36b', 2, 'c', '#1b1626'); const lines = wc.lines; let yy = 72; for (const l of lines) for (const w of wrap(l, BW - 60)) { text(g, w, BW / 2, yy, '#f4f0e6', 1, 'c'); yy += 8; } if (wonT > 2 && Math.floor(time * 3) % 2 === 0) text(g, 'Z: UP INTO THE WOOD', BW / 2, BH - 20, '#9ad0ff', 1, 'c'); } }
 
 // ---------------------------------------------------------------------------------------------
 // LOOP — RAF plus a watchdog, so a hidden pane still paints
 // ---------------------------------------------------------------------------------------------
 let last = performance.now(), lastTick = 0, rafQueued = false;
-function tick(now) { lastTick = now; const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000)); last = now; update(dt); render(); }
+function tick(now) { lastTick = now; const dt = Math.max(0, Math.min(1 / 30, (now - last) / 1000)); last = now; pollPad(); update(dt); render(); }
 function frame(now) { rafQueued = false; tick(now); if (!rafQueued) { rafQueued = true; requestAnimationFrame(frame); } }
 
 bakeAll();

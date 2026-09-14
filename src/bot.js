@@ -2,7 +2,7 @@
 // It walks the intended route of a holloway (world.js `route`), fights what seals a room, opens the chest,
 // digs the plug, kills the boss, takes the stairs. It records deaths, kills, frames, NaN draws, UI text
 // outside the buffer, blank frames, and errors. A death three times in one room lifts the bot past it.
-import { AREAS, K, SOLID, DIGGABLE, CELL_W, CELL_H } from './world.js';
+import { AREAS, K, SOLID, DIGGABLE, SWIMMABLE, CELL_W, CELL_H } from './world.js';
 
 const TS = 16;
 export async function runBot(HW, opts = {}) {
@@ -21,7 +21,8 @@ export async function runBot(HW, opts = {}) {
   const yieldNow = () => new Promise(r => setTimeout(r, 0));
   const area = () => HW.area;
   const tile = (x, y) => { const a = area(); return (x < 0 || y < 0 || x >= a.W || y >= a.H) ? K.WALL : a.tiles[y * a.W + x]; };
-  const passable = (x, y, allowDig) => { const k = tile(x, y); if (k === K.PIT) return false; if (DIGGABLE.has(k)) return allowDig; return !SOLID.has(k); };
+  const swim = () => !!P.abilities.lungs;
+  const passable = (x, y, allowDig) => { const k = tile(x, y); if (k === K.PIT) return false; if (DIGGABLE.has(k)) return allowDig; if (SWIMMABLE.has(k)) return swim(); return !SOLID.has(k); };
   // BFS in tiles from the player's tile to a target tile (4-neighbour), returns list of tile centres
   const path = (tx, ty, allowDig = false) => {
     const a = area(); const sx = Math.floor(P.x / TS), sy = Math.floor((P.y - 1) / TS); const key = (x, y) => x + ',' + y;
@@ -30,8 +31,8 @@ export async function runBot(HW, opts = {}) {
     if (!found) return null; const out = []; let cur = [tx, ty]; while (cur) { out.push(cur); cur = prev.get(key(cur[0], cur[1])); } return out.reverse();
   };
   const walkTo = async (tx, ty, { allowDig = false, maxFrames = 900, stopAt = 6 } = {}) => {
-    let pth = path(tx, ty, false) || (allowDig ? path(tx, ty, true) : null); if (!pth) return 'nopath';
-    let i = 1, frames = 0, lastPos = [P.x, P.y], stuck = 0; report.lastWalk = { to: [tx, ty], len: pth.length, trace: [] };
+    let pth = path(tx, ty, false) || (allowDig ? path(tx, ty, true) : null); if (!pth) { report.notes.push(`nopath from ${Math.floor(P.x / TS)},${Math.floor((P.y - 1) / TS)} in ${HW.area.id} to ${tx},${ty} (state ${HW.state}, room ${HW.room && HW.room.id})`); return 'nopath'; }
+    let i = 1, frames = 0, lastPos = [P.x, P.y], stuck = 0; report.lastWalk = { to: [tx, ty], len: pth.length, trace: [] }; const startArea = HW.area.id;
     while (i < pth.length && frames < maxFrames) {
       if (frames % 40 === 0) report.lastWalk.trace.push([frames, i, Math.round(P.x), Math.round(P.y), HW.state, HW.room && HW.room.id, stuck]);
       const [cx, cy] = pth[i]; const gx = cx * TS + 8, gy = cy * TS + 9; const dx = gx - P.x, dy = gy - P.y; const d = Math.hypot(dx, dy);
@@ -40,20 +41,23 @@ export async function runBot(HW, opts = {}) {
       const nk = tile(cx, cy); if (DIGGABLE.has(nk) && allowDig && d < 18) { holdDir(dx, dy); step(2); stop(); HW.press('KeyX'); step(3); HW.release('KeyX'); step(40); frames += 45; continue; }
       holdDir(dx, dy); step(1); frames++;
       if (HW.state !== 'play') { stop(); return HW.state; }
+      if (HW.area.id !== startArea) { stop(); return 'area:' + HW.area.id; }
       if (Math.hypot(P.x - lastPos[0], P.y - lastPos[1]) < 0.2) { stuck++; if (stuck > 30) { stop(); pth = path(tx, ty, allowDig); if (!pth) return 'stuck'; i = 1; stuck = 0; await tap('KeyZ', 3); } } else stuck = 0;
       lastPos = [P.x, P.y];
       if (frames % 60 === 0) await yieldNow();
     }
     stop(); return frames >= maxFrames ? 'timeout' : 'ok';
   };
+  const nearestLand = () => { const sx = Math.floor(P.x / TS), sy = Math.floor((P.y - 1) / TS); let best = null, bd = 1e9; for (let dy = -6; dy <= 6; dy++) for (let dx = -8; dx <= 8; dx++) { const x = sx + dx, y = sy + dy; const k = tile(x, y); if (k !== K.FLOOR) continue; if (HW.room && (x < HW.room.x || x >= HW.room.x + HW.room.w || y < HW.room.y || y >= HW.room.y + HW.room.h)) continue; const d = dx * dx + dy * dy; if (d < bd) { bd = d; best = [x, y]; } } return best; };
   const liveHere = () => HW.enemies.filter(e => e.alive && (HW.room ? e.room === HW.room.id : Math.hypot(e.x - P.x, e.y - P.y) < 160));
   // fight everything alive in the current room: approach, cut, roll away from a tell
   const fight = async (maxFrames = 3600) => {
-    let frames = 0, deathsHere = 0;
+    let frames = 0, deathsHere = 0; if (liveHere().some(e => e.def.big)) maxFrames *= 2;
     while (liveHere().length && frames < maxFrames) {
       const es = liveHere(); let e = null, best = 1e9; for (const x of es) { if (x.state === 'under') continue; const d = Math.hypot(x.x - P.x, x.y - (P.y - 4)); if (d < best) { best = d; e = x; } }
       if (!e) { step(5); frames += 5; continue; }
       const dx = e.x - P.x, dy = e.y - (P.y - 4), d = Math.hypot(dx, dy);
+      if (P.swim) { const land = nearestLand(); if (land) { holdDir(land[0] * TS + 8 - P.x, land[1] * TS + 9 - P.y); step(1); frames++; continue; } }
       const danger = es.some(x => x.state === 'tell' && x.tellT < 0.22 && Math.hypot(x.x - P.x, x.y - P.y) < 50) || es.some(x => x.state === 'charge' && Math.hypot(x.x - P.x, x.y - P.y) < 70) || es.some(x => x.state === 'mark' && x.mark && Math.hypot(x.mark.x - P.x, x.mark.y - P.y) < 30);
       const rockDanger = (window.HW.rocks || []).some(r => !r.done && r.t > r.mark - 0.3 && Math.hypot(r.x - P.x, r.y - P.y) < 22);
       if ((danger || rockDanger) && P.roll <= 0) {
@@ -62,7 +66,9 @@ export async function runBot(HW, opts = {}) {
       const anyTell = es.some(x => x.state === 'tell' && Math.hypot(x.x - P.x, x.y - P.y) < 60);
       const stunned = e.state === 'stunned' || e.state === 'recover' || e.state === 'stagger';
       const reach = e.r + 16;
-      if (d > reach) { holdDir(dx, dy); step(1); frames++; }
+      const nextTile = tile(Math.floor((P.x + Math.sign(dx) * 9) / TS), Math.floor((P.y + Math.sign(dy) * 9) / TS));
+      if (d > reach && e.def.big && e.def.swims && SWIMMABLE.has(nextTile)) { stop(); step(3); frames += 3; }
+      else if (d > reach) { holdDir(dx, dy); step(1); frames++; }
       else { stop(); holdDir(Math.abs(dx) > Math.abs(dy) ? Math.sign(dx) : 0, Math.abs(dx) > Math.abs(dy) ? 0 : Math.sign(dy)); step(1); stop();
         if (e.id === 'warden' && !stunned && !anyTell) { HW.press('KeyX'); step(22); HW.release('KeyX'); step(20); frames += 42; }
         else if (e.id === 'warden' && !stunned) { step(4); frames += 4; }
@@ -92,28 +98,30 @@ export async function runBot(HW, opts = {}) {
   };
   // ---- run ----
   try {
-    const route = opts.route || AREAS.warren.route;
+    const route = opts.route || (HW.area && HW.area.def.route) || AREAS.warren.route;
     if (opts.walk) { const r = await walkTo(opts.walk[0], opts.walk[1], { maxFrames: 600, stopAt: 3 }); report.notes.push('walk: ' + r); report.lastWalk.trace.push(['end', Math.round(P.x), Math.round(P.y), HW.room && HW.room.id]); return report; }
-    if (opts.area !== 'warren' && (!HW.area || HW.area.id !== 'warren')) {
-      // the wood first: kill what is near, talk to nobody, walk to the mouth
+    const target = opts.area || 'warren';
+    if (target === 'mere') HW.PROG.quest.warren = true;
+    if (!HW.area || HW.area.id !== target) {
+      // the wood first: kill what is near, talk to nobody, walk to the gate
       if (!HW.area || HW.area.id !== 'wood') HW.load('wood', 'start');
       HW.tut = null; HW.state = 'play';
-      const mouth = HW.area.ents.find(e => e.kind === 'mouth');
       let f = await fight(1200); report.notes.push('wood fight: ' + f);
-      const r = await walkTo(mouth.x, mouth.y + 1, { maxFrames: 2400 }); report.notes.push('walk to mouth: ' + r);
-      holdDir(0, -1); step(30); stop();
-      if (!HW.area || HW.area.id !== 'warren') { report.notes.push('never entered the warren'); }
+      if (target === 'mere') { const cul = HW.area.ents.find(e => e.kind === 'culvert'); let r = await walkTo(cul.x, cul.y - 1, { maxFrames: 2400 }); if (HW.area.id !== target && r !== 'ok') r = await walkTo(cul.x + 1, cul.y - 1, { maxFrames: 1200 }); report.notes.push('walk to culvert: ' + r); if (HW.area.id !== target) { holdDir(0, 1); step(30); stop(); } }
+      else { const mouth = HW.area.ents.find(e => e.kind === 'mouth'); const r = await walkTo(mouth.x, mouth.y + 1, { maxFrames: 2400 }); report.notes.push('walk to mouth: ' + r); if (HW.area.id !== target) { holdDir(0, -1); step(30); stop(); } }
+      if (!HW.area || HW.area.id !== target) { report.notes.push('never entered ' + target); }
     }
-    if (HW.area && HW.area.id === 'warren') {
+    if (HW.area && HW.area.id === target) {
       const kills0 = Object.values(HW.PROG.kills).reduce((a, b) => a + b, 0);
       for (const leg of route) {
         if (HW.state === 'won') break;
+        if (!HW.area || HW.area.id !== target || !HW.room) { HW.load(target, 'entry'); report.notes.push('re-entered ' + target); }
         const allowDig = !!P.abilities.claw;
         if (HW.room.id !== leg.room) { const r = await goRoom(leg.room, allowDig); if (r !== 'ok') { report.notes.push(`route ${leg.room}: ${r}`); if (r.startsWith('stuck') || r === 'noroute' || r.startsWith('blocked')) { const t = HW.area.rooms.find(x => x.id === leg.room); HW.tp(t.x * TS + 10 * TS, t.y * TS + 6 * TS); report.notes.push(`teleported into ${leg.room}`); } } }
         if (HW.room.id !== leg.room) { const r = await goRoom(leg.room, allowDig); if (r !== 'ok') { const t = HW.area.rooms.find(x => x.id === leg.room); HW.tp(t.x * TS + 10 * TS, t.y * TS + 6 * TS); report.notes.push(`teleported into ${leg.room} (${r})`); } }
         if (leg.do === 'clear') { const f = await fight(); if (f !== 'ok') report.notes.push(`${leg.room} fight: ${f}`); }
-        else if (leg.do === 'chest') { const c = HW.area.ents.find(e => e.kind === 'chest' && e.room === leg.room); if (c) { for (let k = 0; k < 3 && !HW.PROG.opened[c.key]; k++) { await walkTo(c.x, c.y + 1, { stopAt: 3 }); holdDir(0, -1); step(3); stop(); step(2); await tap('Space'); step(10); } report.notes.push(`chest ${leg.room}: keys=${P.keys} opened=${!!HW.PROG.opened[c.key]}`); } }
-        else if (leg.do === 'dig') { const r = HW.room; const plug = r.doors.find(d => d.side === leg.at); if (plug) { const res = await walkTo(plug.x, plug.y, { allowDig: true, maxFrames: 1500, stopAt: 3 }); report.notes.push(`dig ${leg.room}: ${res} claw=${P.abilities.claw}`); } }
+        else if (leg.do === 'chest') { const c = HW.area.ents.find(e => e.kind === 'chest' && e.room === leg.room); if (c) { const sides = [[0, 1, 0, -1], [0, -1, 0, 1], [-1, 0, 1, 0], [1, 0, -1, 0]].filter(([dx, dy]) => passable(c.x + dx, c.y + dy, false)); for (let k = 0; k < 3 && !HW.PROG.opened[c.key]; k++) { const sd = sides[k % Math.max(1, sides.length)] || [0, 1, 0, -1]; await walkTo(c.x + sd[0], c.y + sd[1], { stopAt: 3 }); holdDir(sd[2], sd[3]); step(3); stop(); step(2); await tap('Space'); step(10); } report.notes.push(`chest ${leg.room}: keys=${P.keys} opened=${!!HW.PROG.opened[c.key]}`); } }
+        else if (leg.do === 'dig' || leg.do === 'swim') { const r = HW.room; const plug = r.doors.find(d => d.side === leg.at); if (plug) { const res = await walkTo(plug.x, plug.y, { allowDig: true, maxFrames: 1500, stopAt: 3 }); report.notes.push(`${leg.do} ${leg.room}: ${res} claw=${!!P.abilities.claw} lungs=${!!P.abilities.lungs}`); } }
         else if (leg.do === 'stairs') { const s = HW.area.ents.find(e => e.kind === 'stairs'); const res = await walkTo(s.x, s.y, { stopAt: 2 }); step(10); report.notes.push(`stairs: ${res} state=${HW.state}`); }
         if (blank()) report.blankFrames++;
         await yieldNow();
