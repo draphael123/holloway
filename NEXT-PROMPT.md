@@ -21,7 +21,7 @@
 
 ## Done from the third note
 - Hero and villagers: Svetlana Kushnariova's painted 24x32 people (CC-BY 3.0), two tiles tall. Swing frames are baked onto the standing body per facing (wind-up, mid, extension, follow-through; backhand runs in reverse; thrust uses the extension).
-- The roll is a STEP: a short hop the way you press, or straight back when standing still. Untouchable for its length.
+- The dodge is a DASH: about four tiles in a sixth of a second, the way you press or straight ahead, untouchable throughout, with afterimages. Still on stamina.
 - Fewer goblins per room, longer gaps between their wind-ups, and every blow shows the weapon.
 - Cave music in the warren (it had been playing the wood's theme) and a crystal-cave loop in the mere.
 - Denser dungeon dressing: stalactites, rubble, glowing crystals, moss, puddles, crates.

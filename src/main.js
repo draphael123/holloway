@@ -60,7 +60,7 @@ function pollPad() {
   for (const i in PAD_BTN) { const b = pad.buttons[i]; if (b && (b.pressed || b.value > 0.5)) now.add(PAD_BTN[i]); }
   const ax = pad.axes[0] || 0, ay = pad.axes[1] || 0;
   if (ax < -0.45) now.add('PadLeft'); if (ax > 0.45) now.add('PadRight'); if (ay < -0.45) now.add('PadUp'); if (ay > 0.45) now.add('PadDown');
-  for (const c of now) if (!padDown.has(c)) { keys.add(c); pressed.add(c); if (!padSeen) { padSeen = true; audioBoot(); playMusic(musicUrl(), musicName()); toast('PAD: A STEPS  X CUTS  B GUARDS  Y TALKS', 3, '#9ad0ff'); } }
+  for (const c of now) if (!padDown.has(c)) { keys.add(c); pressed.add(c); if (!padSeen) { padSeen = true; audioBoot(); playMusic(musicUrl(), musicName()); toast('PAD: A DASHES  X CUTS  B GUARDS  Y TALKS', 3, '#9ad0ff'); } }
   for (const c of padDown) if (!now.has(c)) keys.delete(c);
   padDown.clear(); for (const c of now) padDown.add(c);
 }
@@ -122,13 +122,13 @@ const SKILLS = [
   { id: 'guard2', branch: 1, tier: 1, name: 'RIPOSTE', desc: 'After a parry the next blow does double.' },
   { id: 'guard3', branch: 1, tier: 2, name: 'STONEWALL', desc: 'The guard costs half and takes almost nothing.' },
   { id: 'foot1', branch: 2, tier: 0, name: 'QUICK FEET', desc: 'Walk a tenth faster.' },
-  { id: 'foot2', branch: 2, tier: 1, name: 'LONG STEP', desc: 'The step goes a third further.' },
+  { id: 'foot2', branch: 2, tier: 1, name: 'LONG DASH', desc: 'The dash goes a third further.' },
   { id: 'foot3', branch: 2, tier: 2, name: 'SECOND WIND', desc: 'Stamina comes back half again as fast.' },
 ];
 const BRANCH = ['BLADE', 'GUARD', 'FOOT'];
 const CHARMS = {
   thornband: { name: 'THORNBAND', col: '#5a9a3a', desc: 'A ring of bramble. Every blow does a little more.' },
-  ratfoot: { name: 'RATFOOT', col: '#8a7562', desc: 'Dried and strung. The step is cheap and quick.' },
+  ratfoot: { name: 'RATFOOT', col: '#8a7562', desc: 'Dried and strung. The dash is cheap and quick.' },
   brockhide: { name: 'BROCKHIDE', col: '#7c7c8a', desc: 'A strip of striped hide. You take a fifth less.' },
   mothsilk: { name: 'MOTHSILK', col: '#e6dcc4', desc: 'Spun by something in the wood. Stamina comes back a third faster.' },
   eelskin: { name: 'EELSKIN', col: '#4a7a68', desc: 'Slick and cold. You swim a third faster and the dive is nearly free.' },
@@ -204,7 +204,7 @@ let god = false;
 
 const P = { x: 0, y: 0, facing: 'down', moving: false, walk: 0, hp: 60, maxHp: 60, st: 100, maxSt: 100, stDelay: 0,
   atk: 0, atkDur: 0, combo: 0, atkHit: null, swingEndT: -9, abuf: 0, hold: 0, charging: false, heavy: false, thrust: false, dash: false, dashWin: 0, dashQueued: false, specialCd: 0, specialKind: '', special: 'claw',
-  guard: false, parryT: 0, cT: 0, riposte: 0, roll: 0, rollDur: 0.18, rdx: 0, rdy: 0, inv: 0, stagger: 0, flash: 0, dead: false,
+  guard: false, parryT: 0, cT: 0, riposte: 0, roll: 0, rollDur: 0.16, trail: [], rdx: 0, rdy: 0, inv: 0, stagger: 0, flash: 0, dead: false,
   dig: 0, digTile: null, lvl: 1, xp: 0, pts: 0, might: 0, gold: 0, keys: 0, skills: {}, charms: [], equipped: [null, null], abilities: {}, keepings: 0,
   lastSafe: { x: 0, y: 0 }, push: { x: 0, y: 0 }, lastHurtBy: '', idleT: 0, stepT: 0, softHint: 0 };
 
@@ -347,7 +347,7 @@ const speedMul = () => (has('foot1') ? 1.1 : 1);
 const reach = () => 22 + (has('blade1') ? 6 : 0);
 const arcHalf = () => (has('blade3') ? 1.5 : 1.05);
 const parryWin = () => (has('guard1') ? 0.28 : 0.18);
-const rollDist = () => 30 * (has('foot2') ? 1.35 : 1);
+const rollDist = () => 72 * (has('foot2') ? 1.35 : 1);
 const rollCost = () => (wearing('ratfoot') ? 14 : 22);
 function baseDmg() { return 10 * (1 + 0.07 * (P.lvl - 1) + 0.04 * P.might) * (wearing('thornband') ? 1.12 : 1); }
 function spend(n) { if (god) return true; if (P.st < n) return false; P.st -= n; P.stDelay = 0.7; return true; }
@@ -367,9 +367,11 @@ function updatePlayer(dt) {
   const len = Math.hypot(mx, my); if (len) { mx /= len; my /= len; }
   // ---- roll ----
   P.dashWin = Math.max(0, P.dashWin - dt); P.specialCd = Math.max(0, P.specialCd - dt);
+  for (const t of P.trail) t.t -= dt; P.trail = P.trail.filter(t => t.t > 0);
   if (P.roll > 0) {
     P.roll -= dt; const sp = rollDist() / P.rollDur;
     moveBox(P, P.rdx * sp * dt, P.rdy * sp * dt, P_HW, P_HH, 'player');
+    P.trail.push({ x: P.x, y: P.y, t: 0.22 }); if (P.trail.length > 6) P.trail.shift();
     if (press('attack') && !P.swim) P.dashQueued = true;
     if (P.roll <= 0) { puff(P.x, P.y, 3, P.swim ? '#d6ecf8' : '#c9b9a0', 18); P.inv = Math.max(P.inv, 0.05); P.dashWin = 0.15; if (P.dashQueued) { P.dashQueued = false; P.facing = faceOf(P.rdx, P.rdy); startSwing(true); } }
     P.moving = false;
@@ -403,7 +405,7 @@ function updatePlayer(dt) {
       if (P.guard) { P.stDelay = Math.max(P.stDelay, 0.2); }
       // ---- roll ----
       if (press('roll') && P.st >= rollCost() * (god ? 0 : 1)) {
-        if (spend(P.swim && wearing('eelskin') ? 6 : rollCost())) { P.roll = P.rollDur; const a = len ? Math.atan2(my, mx) : FACE_ANG[P.facing] + Math.PI; P.rdx = Math.cos(a); P.rdy = Math.sin(a); P.guard = false; P.parryT = 0; sfx.roll(); puff(P.x, P.y, 5, '#c9b9a0', 30); }
+        if (spend(P.swim && wearing('eelskin') ? 6 : rollCost())) { P.roll = P.rollDur; const a = len ? Math.atan2(my, mx) : FACE_ANG[P.facing]; P.rdx = Math.cos(a); P.rdy = Math.sin(a); if (len) P.facing = faceOf(mx, my); P.guard = false; P.parryT = 0; P.trail = []; sfx.roll(); puff(P.x, P.y, 5, '#c9b9a0', 30); }
       } else if (len) {
         const sp = 72 * speedMul() * (P.guard ? 0.5 : 1) * (P.swim ? (wearing('eelskin') ? 0.75 : 0.55) : 1);
         const bx = P.x, by = P.y; moveBox(P, mx * sp * dt, my * sp * dt, P_HW, P_HH, 'player');
@@ -555,7 +557,7 @@ function fallInPit() { sfx.fall(); hurtPlayerRaw(6, 'THE PIT'); P.x = P.lastSafe
 // every enemy attack comes through here: roll, parry, guard, then damage
 function hitPlayer(src, dmg, fromX, fromY, pushN = 120, kind = 'melee') {
   if (P.dead) return false;
-  if (P.roll > 0) { floater(P.x, P.y - 26, 'STEPPED', '#c9b9a0'); return false; }
+  if (P.roll > 0) { floater(P.x, P.y - 26, 'DASHED', '#c9b9a0'); return false; }
   if (P.inv > 0) return false;
   const toSrc = Math.atan2(fromY - (P.y - 4), fromX - P.x); const frontal = Math.abs(angDiff(FACE_ANG[P.facing], toSrc)) < 1.6;
   if (P.parryT > 0 && frontal) {
@@ -868,7 +870,7 @@ const TUT = [
   { id: 'heavy', text: 'HOLD X and let go for THE HEAVY BLOW. It breaks a shield.', done: () => P.heavy && P.atk > 0 },
   { id: 'guard', text: 'HOLD C to GUARD. Front only. It costs stamina, the green bar.', done: () => P.guard && P.cT > 0.3 },
   { id: 'parry', text: 'TAP C as a blow lands to PARRY it. Try it on a goblin.', done: () => tut.parried },
-  { id: 'roll', text: 'Press Z to STEP: a quick hop, backwards if you stand still. Nothing can touch you during it.', done: () => P.roll > 0 },
+  { id: 'roll', text: 'Press Z to DASH the way you press, or straight ahead. Nothing can touch you during it. X during a dash is a dash-cut.', done: () => P.roll > 0 },
   { id: 'talk', text: 'Talk to WARDEN HESK with SPACE. Then go north to the warren.', done: () => tut.talked },
 ];
 function startTutorial() { tut = { i: 0, t: 0, parried: false, talked: false, hold: 0 }; }
@@ -1031,7 +1033,8 @@ function drawHero(ox, oy) {
     else if (P.dig > 0) { g.drawImage(SPR.claw, Math.round(sx + Math.cos(ang) * 8 - 6), Math.round(sy - 12 + Math.sin(ang) * 4 + Math.sin(time * 30) * 2)); }
   };
   if (behind) drawSword();
-  if (P.roll > 0) { const k = 1 - P.roll / P.rollDur; const hop = Math.round(Math.sin(k * Math.PI) * 5); g.drawImage(fr.canvas, sx - fr.ax, sy - fr.ay + 1 - hop); }
+  if (P.roll > 0 || P.trail.length) { const runFr = set[1]; for (const t of P.trail) { g.globalAlpha = Math.max(0, t.t / 0.22) * 0.45; g.drawImage(CH.silhouette(runFr.canvas, '#9ad0ff'), ox + Math.round(t.x) - runFr.ax, oy + Math.round(t.y) - runFr.ay + 1); } g.globalAlpha = 1; if (P.roll > 0) { g.drawImage(runFr.canvas, sx - runFr.ax, sy - runFr.ay + 1); } }
+  if (P.roll > 0) { /* drawn above */ }
   else if (P.dead) { g.save(); g.translate(sx, sy); g.rotate(Math.min(1, deadT) * Math.PI / 2); g.drawImage(fr.canvas, -fr.ax, -fr.ay); g.restore(); }
   else {
     g.drawImage(fr.canvas, sx - fr.ax, sy - fr.ay - (P.moving && fr.bob ? 1 : 0) + 1);
@@ -1192,7 +1195,7 @@ function drawPause() {
     text(g, 'TILES: ARMM1998 (CC0), GEORGE BAILEY (CC-BY 4.0)', 22, BH - 46, '#5a4a6a');
     text(g, 'PEOPLE: SVETLANA KUSHNARIOVA (CC-BY 3.0)  MUSIC: CC0', 22, BH - 38, '#5a4a6a');
     text(g, 'ESC CLOSES', 22, BH - 30, '#5a4a6a');
-    text(g, 'X CUT  HOLD X HEAVY  C GUARD  TAP C PARRY  Z STEP  X IN A STEP: DASH-CUT  V SPECIAL', 22, BH - 22, '#5a4a6a');
+    text(g, 'X CUT  HOLD X HEAVY  C GUARD  TAP C PARRY  Z DASH  X IN A DASH: DASH-CUT  V SPECIAL', 22, BH - 22, '#5a4a6a');
   }
 }
 function drawDead() { g.fillStyle = `rgba(20,4,8,${Math.min(0.7, deadT * 0.6)})`; g.fillRect(0, 0, BW, BH); if (deadT > 0.6) { text(g, 'THE WOOD KEEPS YOU', BW / 2, 70, '#ff6a3a', 2, 'c', '#1b1626'); text(g, `TAKEN BY ${P.lastHurtBy}`, BW / 2, 92, '#c9b9a0', 1, 'c'); if (deadT > 1.2 && Math.floor(time * 3) % 2 === 0) text(g, 'Z: BACK TO THE LAST SAFE PLACE', BW / 2, 112, '#f4f0e6', 1, 'c'); } }

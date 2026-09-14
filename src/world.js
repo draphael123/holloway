@@ -328,7 +328,7 @@ export const AREAS = {
       { idx: 3, name: 'THE PEDLAR', shop: true, sheet: 'pedlar', look: { hair: '#2a2a2a', skin: '#c98a5a', tunic: '#e0bb65', pants: '#4b3d5c', boots: '#2a2a2a', accent: '#f7f2e6', hat: '#7a3a1a' },
         lines: ['PEDLAR: Gold from under the roots spends the same as any. What do you need?'], after: ['PEDLAR: The one who came back from the warren. Prices are the same, but I will not haggle with you.'], after2: ['PEDLAR: You have been to the mere. I can smell it. Buy something, it helps.'] },
     ],
-    signs: { S: ['ARROWS or WASD to walk. X cuts, hold X for THE HEAVY BLOW.', 'C guards. TAP C as a blow lands to PARRY. Z steps back, or the way you press.', 'SPACE talks and opens. TAB is your pack: skills, charms, the bestiary.'] },
+    signs: { S: ['ARROWS or WASD to walk. X cuts, hold X for THE HEAVY BLOW.', 'C guards. TAP C as a blow lands to PARRY. Z dashes the way you press, or straight ahead.', 'SPACE talks and opens. TAB is your pack: skills, charms, the bestiary.'] },
     exits: { mouth: { to: 'warren', at: 'entry' }, culvert: { to: 'mere', at: 'entry' } },
     freeCamera: true,
   },
