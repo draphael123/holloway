@@ -220,4 +220,9 @@ export function bakeCliffFace(seed) { // irregular courses of stone under a lip 
   rect(g, 0, TS - 1, TS, 1, R.deep);
   return c;
 }
+export function bakePot(seed) { // a clay jar: breakable, sometimes worth breaking
+  const rnd = mulberry(seed); const [c, g] = canvas(14, 16); const clay = rnd() < 0.5 ? '#b0623a' : '#8a6a5a', clayL = shade(clay, 0.25), clayD = shade(clay, -0.3);
+  ellipse(g, 7, 10, 6, 5, clay); ellipse(g, 6, 9, 4, 3, clayL); ellipse(g, 7, 13, 5, 2, clayD); rect(g, 4, 3, 6, 3, clay); rect(g, 3, 2, 8, 2, clayD); rect(g, 4, 2, 6, 1, clayL); px(g, 9, 8, clayD); if (rnd() < 0.5) { px(g, 5, 11, clayD); px(g, 6, 12, clayD); }
+  outline(c, '#241826'); return { canvas: c, ax: 7, ay: 15 };
+}
 export function bakeFenceTile() { const [c, g] = canvas(TS, 18); rect(g, 0, 8, TS, 2, D.woodL); rect(g, 0, 13, TS, 2, D.woodL); rect(g, 6, 4, 4, 13, D.wood); rect(g, 6, 4, 1, 13, D.woodL); rect(g, 6, 3, 4, 1, D.woodL); outline(c, '#241826'); return { canvas: c, ax: 8, ay: 17 }; }

@@ -7,7 +7,7 @@ import * as GB from './goblins.js';
 import { T as TSET, OVER, CAVE, loadTileset, bakePerson } from './tileset.js';
 import { PEOPLE, loadPeople, bakePerson24 } from './people.js';
 import { text, textW, wrap, fitText } from './font.js';
-import { AREAS, parseArea, roomDoors, K, SOLID, DIGGABLE, SWIMMABLE, GRASSY, CELL_W, CELL_H } from './world.js';
+import { AREAS, parseArea, roomDoors, K, SOLID, DIGGABLE, SWIMMABLE, GRASSY, BREAKABLE, CELL_W, CELL_H } from './world.js';
 import { boot as audioBoot, sfx, settings as AUD, apply as audioApply, playMusic, stopMusic } from './audio.js';
 
 const BW = 320, BH = 180, TS = 16;
@@ -47,7 +47,7 @@ addEventListener('resize', resize); resize();
 const keys = new Set(); let pressed = new Set();
 const KEYS = {
   up: ['ArrowUp', 'KeyW', 'PadUp'], down: ['ArrowDown', 'KeyS', 'PadDown'], left: ['ArrowLeft', 'KeyA', 'PadLeft'], right: ['ArrowRight', 'KeyD', 'PadRight'],
-  attack: ['KeyX', 'KeyJ', 'PadX'], guard: ['KeyC', 'KeyL', 'ShiftLeft', 'ShiftRight', 'PadB', 'PadRB', 'PadLB'], roll: ['KeyZ', 'KeyK', 'PadA'], interact: ['Space', 'Enter', 'KeyE', 'PadY'],
+  attack: ['KeyX', 'KeyJ', 'PadX'], guard: ['KeyC', 'KeyL', 'ShiftLeft', 'ShiftRight', 'PadB', 'PadRB'], special: ['KeyV', 'KeyU', 'PadLB'], roll: ['KeyZ', 'KeyK', 'PadA'], interact: ['Space', 'Enter', 'KeyE', 'PadY'],
   menu: ['Tab', 'KeyI', 'PadSelect'], pause: ['Escape', 'KeyP', 'PadStart'], take: ['KeyZ', 'Enter', 'Space', 'KeyX', 'PadA', 'PadX'], back: ['Escape', 'KeyC', 'Backspace', 'PadB'],
 };
 // a gamepad is read every tick and turned into the same virtual codes (A roll / take, X cut, B guard / back, Y talk)
@@ -170,7 +170,7 @@ function bakeAll() {
   SPR.lungsIcon = (() => { const [c, g] = canvas(12, 12); g.fillStyle = '#4a7a68'; g.fillRect(1, 3, 4, 8); g.fillRect(7, 3, 4, 8); g.fillStyle = '#7ab6a0'; g.fillRect(2, 4, 2, 3); g.fillRect(8, 4, 2, 3); g.fillStyle = '#e6dcc4'; g.fillRect(5, 1, 2, 6); return outline(c, '#1b1626'); })();
   SPR.trees = [0, 1, 2, 3, 4, 5].map(i => ART.bakeTree(700 + i, i >= 4)); SPR.bush = [0, 1, 2].map(i => ART.bakeBush(800 + i));
   SPR.signpost = ART.bakeSignpost(); SPR.stall = ART.bakeStall('#c9452e'); SPR.lamp = ART.bakeLamp(); SPR.crate = ART.bakeCrate();
-  SPR.moss = [0, 1, 2].map(i => DA.bakeMoss(SPR.earth[i], 500 + i)); SPR.mossDecal = [0, 1, 2].map(i => { const [c, gg] = canvas(16, 16); const rnd = mulberry(700 + i); for (let n = 0; n < 28; n++) { const x = Math.floor(rnd() * 16), y = Math.floor(rnd() * 16); gg.fillStyle = rnd() < 0.3 ? '#4a7a3a' : '#3a6a34'; gg.fillRect(x, y, 1, 1); if (rnd() < 0.4) { gg.fillStyle = '#5a8a44'; gg.fillRect(x + 1, y, 1, 1); } } return c; }); SPR.mushrooms = [0, 1, 2].map(i => DA.bakeMushrooms(520 + i)); SPR.roots = [0, 1].map(i => DA.bakeRoots(540 + i)); SPR.puddle = [0, 1, 2].map(f => DA.bakePuddle(f)); SPR.tallgrass = [0, 1, 2].map(i => DA.bakeTallGrass(560 + i)); SPR.stump = [0, 1].map(i => DA.bakeStump(580 + i)); SPR.stal = [0, 1, 2].map(i => DA.bakeStalagmite(600 + i)); SPR.cliffTop = [0, 1].map(i => DA.bakeCliffTop(620 + i)); SPR.cliffFace = [0, 1].map(i => DA.bakeCliffFace(640 + i)); SPR.fenceTile = DA.bakeFenceTile(); SPR.butterfly = [['#f4d35e', 0], ['#f4d35e', 1], ['#fbf6ea', 0], ['#fbf6ea', 1]].map(([c, f]) => ART.bakeButterfly(f, c));
+  SPR.moss = [0, 1, 2].map(i => DA.bakeMoss(SPR.earth[i], 500 + i)); SPR.mossDecal = [0, 1, 2].map(i => { const [c, gg] = canvas(16, 16); const rnd = mulberry(700 + i); for (let n = 0; n < 28; n++) { const x = Math.floor(rnd() * 16), y = Math.floor(rnd() * 16); gg.fillStyle = rnd() < 0.3 ? '#4a7a3a' : '#3a6a34'; gg.fillRect(x, y, 1, 1); if (rnd() < 0.4) { gg.fillStyle = '#5a8a44'; gg.fillRect(x + 1, y, 1, 1); } } return c; }); SPR.mushrooms = [0, 1, 2].map(i => DA.bakeMushrooms(520 + i)); SPR.roots = [0, 1].map(i => DA.bakeRoots(540 + i)); SPR.puddle = [0, 1, 2].map(f => DA.bakePuddle(f)); SPR.tallgrass = [0, 1, 2].map(i => DA.bakeTallGrass(560 + i)); SPR.stump = [0, 1].map(i => DA.bakeStump(580 + i)); SPR.stal = [0, 1, 2].map(i => DA.bakeStalagmite(600 + i)); SPR.pot = [0, 1, 2].map(i => DA.bakePot(660 + i)); SPR.cliffTop = [0, 1].map(i => DA.bakeCliffTop(620 + i)); SPR.cliffFace = [0, 1].map(i => DA.bakeCliffFace(640 + i)); SPR.fenceTile = DA.bakeFenceTile(); SPR.butterfly = [['#f4d35e', 0], ['#f4d35e', 1], ['#fbf6ea', 0], ['#fbf6ea', 1]].map(([c, f]) => ART.bakeButterfly(f, c));
   SPR.bubble = outline(fromGrid(['.wwwww.', 'wwwwwww', 'ww.w.ww', 'wwwwwww', '.wwwww.', '..ww...', '..w....'], { w: '#fff8e8' }, 1));
   SPR.house = ART.bakeBuilding({ w: 4, d: 3, H: 28, wall: { lit: '#efe3c8', timber: '#6e4a2e' }, roof: { lite: '#e6c46e', mid: '#c49a3f', dark: '#8a6a2a' }, chimney: true, door: { u: 1.5 }, windows: [{ u: 0.3, v: 10, box: true }, { u: 3.0, v: 10, shutters: true }] });
 }
@@ -203,7 +203,7 @@ let talk = null, deadT = 0, wonT = 0, introT = 0, tut = null;
 let god = false;
 
 const P = { x: 0, y: 0, facing: 'down', moving: false, walk: 0, hp: 60, maxHp: 60, st: 100, maxSt: 100, stDelay: 0,
-  atk: 0, atkDur: 0, combo: 0, atkHit: null, swingEndT: -9, abuf: 0, hold: 0, charging: false, heavy: false, thrust: false,
+  atk: 0, atkDur: 0, combo: 0, atkHit: null, swingEndT: -9, abuf: 0, hold: 0, charging: false, heavy: false, thrust: false, dash: false, dashWin: 0, dashQueued: false, specialCd: 0, specialKind: '', special: 'claw',
   guard: false, parryT: 0, cT: 0, riposte: 0, roll: 0, rollDur: 0.18, rdx: 0, rdy: 0, inv: 0, stagger: 0, flash: 0, dead: false,
   dig: 0, digTile: null, lvl: 1, xp: 0, pts: 0, might: 0, gold: 0, keys: 0, skills: {}, charms: [], equipped: [null, null], abilities: {}, keepings: 0,
   lastSafe: { x: 0, y: 0 }, push: { x: 0, y: 0 }, lastHurtBy: '', idleT: 0, stepT: 0, softHint: 0 };
@@ -284,7 +284,8 @@ function load(areaId, at = 'start') {
     else if (k === K.BUSH) props.push({ kind: 'bush', x: cx, y: cy - 1, spr: SPR.bush[(tx + ty) % 3] });
     else if (k === K.STUMP) props.push({ kind: 'stump', x: cx, y: cy - 1, spr: SPR.stump[(tx * 3 + ty) % 2] });
     else if (k === K.STAL) props.push({ kind: 'stal', x: cx, y: cy - 1, spr: SPR.stal[(tx + ty * 5) % 3] });
-    else if (k === K.CRATE) props.push({ kind: 'crate', x: cx, y: cy - 1, spr: SPR.crate });
+    else if (k === K.CRATE) props.push({ kind: 'crate', x: cx, y: cy - 1, spr: SPR.crate, tx, ty });
+    else if (k === K.POT) props.push({ kind: 'pot', x: cx, y: cy - 1, spr: SPR.pot[(tx * 5 + ty * 3) % 3], tx, ty });
     else if (k === K.LAMP) props.push({ kind: 'lamp', x: cx, y: cy - 1, spr: SPR.lamp });
     else if (k === K.FENCE) props.push({ kind: 'fence', x: cx, y: cy - 1, spr: SPR.fenceTile });
   }
@@ -365,10 +366,12 @@ function updatePlayer(dt) {
   if (held('up')) my -= 1; if (held('down')) my += 1; if (held('left')) mx -= 1; if (held('right')) mx += 1;
   const len = Math.hypot(mx, my); if (len) { mx /= len; my /= len; }
   // ---- roll ----
+  P.dashWin = Math.max(0, P.dashWin - dt); P.specialCd = Math.max(0, P.specialCd - dt);
   if (P.roll > 0) {
     P.roll -= dt; const sp = rollDist() / P.rollDur;
     moveBox(P, P.rdx * sp * dt, P.rdy * sp * dt, P_HW, P_HH, 'player');
-    if (P.roll <= 0) { puff(P.x, P.y, 3, P.swim ? '#d6ecf8' : '#c9b9a0', 18); P.inv = Math.max(P.inv, 0.05); }
+    if (press('attack') && !P.swim) P.dashQueued = true;
+    if (P.roll <= 0) { puff(P.x, P.y, 3, P.swim ? '#d6ecf8' : '#c9b9a0', 18); P.inv = Math.max(P.inv, 0.05); P.dashWin = 0.15; if (P.dashQueued) { P.dashQueued = false; P.facing = faceOf(P.rdx, P.rdy); startSwing(true); } }
     P.moving = false;
   } else if (P.dig > 0) {
     P.dig -= dt; if (Math.random() < 0.6) puff(P.digTile.x * TS + 8, P.digTile.y * TS + 10, 2, '#8a6a3f', 40);
@@ -384,13 +387,14 @@ function updatePlayer(dt) {
     if (P.charging) { P.chargeT += dt; if (P.chargeT > 1.2) releaseHeavy(); P.moving = false; }
     else if (P.atk > 0) {
       P.atk -= dt; const k = 1 - P.atk / P.atkDur; const ang = FACE_ANG[P.facing];
-      const lungeSp = P.thrust ? (has('blade2') ? 120 : 70) : P.heavy ? 40 : 30;
+      const lungeSp = P.dash ? 190 : P.thrust ? (has('blade2') ? 120 : 70) : P.heavy ? 40 : 30;
       if (k > 0.1 && k < 0.6) moveBox(P, Math.cos(ang) * lungeSp * dt, Math.sin(ang) * lungeSp * dt, P_HW, P_HH, 'player');
       if (k >= 0.22 && k <= 0.62) swingHits();
-      if (P.atk <= 0) { P.swingEndT = time; P.heavy = false; P.thrust = false; }
+      if (P.atk <= 0) { P.swingEndT = time; P.heavy = false; P.thrust = false; P.dash = false; P.specialKind = ''; }
       P.moving = false;
     } else {
-      if (P.abuf > 0 && !held('guard') && !P.swim) { const dug = tryDig(); if (!dug) startSwing(); P.abuf = 0; }
+      if (P.abuf > 0 && !held('guard') && !P.swim) { const dug = tryDig(); if (!dug) startSwing(P.dashWin > 0); P.abuf = 0; }
+      if (press('special') && !P.swim && P.specialCd <= 0) useSpecial();
       // ---- guard / parry ----
       const gHeld = held('guard') && !P.swim;
       if (press('guard')) { P.parryT = parryWin(); P.cT = 0; }
@@ -430,11 +434,11 @@ function updatePlayer(dt) {
   const r = roomAt(P.x, P.y); if (r && r !== curRoom) enterRoom(r);
   P.idleT = P.moving ? 0 : P.idleT + dt;
 }
-function startSwing() {
-  const chain = time - P.swingEndT < 0.45 && P.combo < 2;
-  P.combo = chain ? P.combo + 1 : 0; P.thrust = P.combo === 2; P.heavy = false;
-  P.atkDur = P.thrust ? 0.34 : 0.26; P.atk = P.atkDur; P.atkHit = new Set(); P.guard = false; P.parryT = 0;
-  sfx.slash(P.combo);
+function startSwing(dash = false) {
+  const chain = !dash && time - P.swingEndT < 0.45 && P.combo < 2;
+  P.combo = chain ? P.combo + 1 : 0; P.thrust = !dash && P.combo === 2; P.heavy = false; P.dash = dash; P.specialKind = '';
+  P.atkDur = dash ? 0.2 : P.thrust ? 0.34 : 0.26; P.atk = P.atkDur; P.atkHit = new Set(); P.guard = false; P.parryT = 0;
+  if (dash) { P.dashWin = 0; sfx.heavy(); puff(P.x, P.y, 4, '#c9b9a0', 30); } else sfx.slash(P.combo);
   const ang = FACE_ANG[P.facing];
   fx.push({ kind: 'slash', x: P.x, y: P.y - 6, ang, t: 0.16, max: 0.16, dir: P.combo === 1 ? -1 : 1, thrust: P.thrust, r: reach() });
 }
@@ -449,7 +453,8 @@ function inSector(ox, oy, ang, r, half, tx, ty, tr) {
   return Math.abs(angDiff(ang, Math.atan2(ty - oy, tx - ox))) < half + Math.atan2(tr, Math.max(1, d));
 }
 function swingHits() {
-  const ang = FACE_ANG[P.facing]; const ox = P.x, oy = P.y - 6; const r = reach() + (P.heavy ? 6 : 0) + (P.thrust ? 6 : 0); const half = P.thrust ? 0.5 : arcHalf();
+  const ang = FACE_ANG[P.facing]; const ox = P.x, oy = P.y - 6; const r = reach() + (P.heavy ? 6 : 0) + (P.thrust ? 6 : 0) + (P.specialKind === 'claw' ? 10 : 0); const half = P.specialKind === 'claw' ? 2.0 : P.thrust ? 0.5 : arcHalf();
+  breakInArc(ox, oy, ang, r, half);
   for (const e of enemies) {
     if (!e.alive || e.state === 'under' || P.atkHit.has(e) || e.room !== (curRoom ? curRoom.id : null)) continue;
     if (!inSector(ox, oy, ang, r, half, e.x, e.y - e.r * 0.6, e.r)) continue;
@@ -458,15 +463,41 @@ function swingHits() {
     if (e.id === 'warden' && !P.heavy && e.state !== 'stagger' && e.state !== 'stunned') {
       const toP = Math.atan2(P.y - e.y, P.x - e.x); if (Math.abs(angDiff(FACE_ANG[e.facing], toP)) < 1.3) { sfx.hit('wood'); spark(e.x + Math.cos(toP) * 8, e.y - 8, '#c9a56a'); floater(e.x, e.y - 22, 'TURNED', '#c9b9a0'); hitstop = 0.03; continue; }
     }
-    let dmg = baseDmg() * (P.thrust ? (has('blade2') ? 2 : 1.6) : 1) * (P.heavy ? 2.4 * (wearing('pikescale') ? 1.25 : 1) : 1) * (P.riposte > 0 ? 2 : 1);
+    let dmg = baseDmg() * (P.thrust ? (has('blade2') ? 2 : 1.6) : 1) * (P.heavy ? 2.4 * (wearing('pikescale') ? 1.25 : 1) : 1) * (P.riposte > 0 ? 2 : 1) * (P.dash ? 1.3 : 1) * (P.specialKind === 'claw' ? 1.6 : 1);
     if (e.state === 'stunned' || e.state === 'recover') dmg *= e.stunMul;
     if (P.riposte > 0) { P.riposte = 0; floater(P.x, P.y - 30, 'RIPOSTE', '#ffd36b'); }
-    hurtEnemy(e, Math.round(dmg), ang, P.heavy);
+    hurtEnemy(e, Math.round(dmg), ang, P.heavy || P.specialKind === 'claw');
   }
 }
+// crates and pots in the arc break, and sometimes give something up
+function breakInArc(ox, oy, ang, r, half) {
+  for (let a = -half; a <= half; a += 0.35) for (let d = 8; d <= r; d += 7) {
+    const tx = Math.floor((ox + Math.cos(ang + a) * d) / TS), ty = Math.floor((oy + Math.sin(ang + a) * d) / TS);
+    if (BREAKABLE.has(tileAt(tx, ty))) breakTile(tx, ty);
+  }
+}
+function breakTile(tx, ty) {
+  const k = tileAt(tx, ty); setTile(tx, ty, K.FLOOR); props = props.filter(p => !(p.tx === tx && p.ty === ty));
+  const cx = tx * TS + 8, cy = ty * TS + 8; sfx.hit(k === K.POT ? 'stone' : 'wood'); hitstop = Math.max(hitstop, 0.03); shake = Math.max(shake, 1.5);
+  puff(cx, cy, 10, k === K.POT ? '#b0623a' : '#a6733f', 60);
+  const r = Math.random();
+  if (r < 0.4) { const n = 1 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) pickups.push({ kind: 'coin', x: cx, y: cy, vx: (Math.random() - 0.5) * 70, vy: -40 - Math.random() * 30, z: 0, t: 0 }); }
+  else if (r < 0.55) pickups.push({ kind: 'heart', x: cx, y: cy, vx: (Math.random() - 0.5) * 30, vy: -40, z: 0, t: 0 });
+}
+// THE SPECIAL (V): a verb you took from a creature, turned on the room
+function useSpecial() {
+  const kind = P.special === 'lungs' && P.abilities.lungs ? 'lungs' : P.abilities.claw ? 'claw' : null;
+  if (!kind) { if (P.softHint <= 0) { toast('NO SPECIAL YET. THE WOOD HAS THEM', 2, '#c9b9a0'); P.softHint = 3; } return; }
+  if (!spend(25)) return;
+  if (kind === 'claw') { P.specialKind = 'claw'; P.combo = 0; P.thrust = false; P.heavy = false; P.dash = false; P.atkDur = 0.36; P.atk = P.atkDur; P.atkHit = new Set(); P.guard = false; P.specialCd = 1.6; sfx.claw(); shake = Math.max(shake, 2);
+    fx.push({ kind: 'slash', x: P.x, y: P.y - 6, ang: FACE_ANG[P.facing], t: 0.24, max: 0.24, dir: 1, heavy: true, r: reach() + 10, col: '#e6dcc4' }); }
+  else { P.specialCd = 3; sfx.erupt(); shake = Math.max(shake, 4); ring(P.x, P.y - 6, 44, '#7ab6a0', 0.45); puff(P.x, P.y - 4, 16, '#d6ecf8', 90);
+    for (const e of enemies) { if (!e.alive || e.state === 'under' || (curRoom && e.room !== curRoom.id)) continue; const d = dist(P.x, P.y - 4, e.x, e.y); if (d > 46) continue; const a = Math.atan2(e.y - (P.y - 4), e.x - P.x); hurtEnemy(e, Math.round(baseDmg() * 0.8), a, true); if (!e.def.big) { e.state = 'stagger'; e.t = 0.6; e.push.x += Math.cos(a) * 160; e.push.y += Math.sin(a) * 160; } }
+    projectiles = []; }
+}
 function hurtEnemy(e, dmg, ang, heavy) {
-  e.hp -= dmg; e.flash = 0.12; hitstop = heavy ? 0.07 : 0.045; P.st = Math.min(P.maxSt, P.st + 3);
-  const pushN = (heavy ? 180 : 90) * (e.def.big ? 0.15 : 1); e.push.x += Math.cos(ang) * pushN; e.push.y += Math.sin(ang) * pushN;
+  e.hp -= dmg; e.flash = 0.12; hitstop = heavy ? 0.1 : P.thrust ? 0.08 : 0.05; P.st = Math.min(P.maxSt, P.st + 3);
+  const pushN = (heavy ? 240 : P.thrust ? 170 : 120) * (e.def.big ? 0.15 : 1); e.push.x += Math.cos(ang) * pushN; e.push.y += Math.sin(ang) * pushN;
   sfx.hit(e.def.mat); spark(e.x, e.y - e.r, '#fff'); floater(e.x + (Math.random() - 0.5) * 8, e.y - e.r * 2 - 6, String(dmg), heavy ? '#ffd36b' : '#f4f0e6');
   if (e.def.mat === 'wood') puff(e.x, e.y - e.r, 3, '#5a9a3a', 40); else puff(e.x, e.y - e.r, 3, '#8a3a3a', 40);
   if (heavy && !e.def.big && e.state !== 'stunned') { e.state = 'stagger'; e.t = 1.0; e.tellT = 0; }
@@ -488,7 +519,7 @@ function killEnemy(e) {
 }
 function gainXp(n) {
   P.xp += n; floater(P.x, P.y - 30, `+${n} XP`, '#9ad0ff');
-  while (P.xp >= xpNeed(P.lvl)) { P.xp -= xpNeed(P.lvl); P.lvl++; P.maxHp += 6; P.maxSt += 4; P.might++; P.pts++; P.hp = Math.min(P.maxHp, P.hp + Math.round(P.maxHp * 0.3)); sfx.levelup(); toast(`LEVEL ${P.lvl}. A POINT TO SPEND (TAB)`, 3, '#9ad0ff'); ring(P.x, P.y - 6, 20, '#9ad0ff', 0.5); }
+  while (P.xp >= xpNeed(P.lvl)) { P.xp -= xpNeed(P.lvl); P.lvl++; P.maxHp += 6; P.maxSt += 4; P.might++; P.pts++; P.hp = P.maxHp; sfx.levelup(); toast(`LEVEL ${P.lvl}. A POINT TO SPEND (TAB)`, 3, '#9ad0ff'); ring(P.x, P.y - 6, 20, '#9ad0ff', 0.5); }
   save();
 }
 const xpNeed = l => Math.round(30 * Math.pow(l, 1.5));
@@ -576,7 +607,9 @@ function updateEnemies(dt) {
     if (rid !== null && e.room !== rid) continue;
     if (rid === null && dist(e.x, e.y, P.x, P.y) > 260) continue;
     e.flash = Math.max(0, e.flash - dt); e.moving = false;
-    if (e.push.x || e.push.y) { moveBox(e, e.push.x * dt, e.push.y * dt, e.r * 0.8, e.r * 0.6, whoOf(e)); e.push.x *= Math.pow(0.0005, dt); e.push.y *= Math.pow(0.0005, dt); if (Math.abs(e.push.x) < 2) e.push.x = 0; if (Math.abs(e.push.y) < 2) e.push.y = 0; }
+    if (e.push.x || e.push.y) { const want = Math.hypot(e.push.x, e.push.y) * dt; const bx = e.x, by = e.y; moveBox(e, e.push.x * dt, e.push.y * dt, e.r * 0.8, e.r * 0.6, whoOf(e)); const got = Math.hypot(e.x - bx, e.y - by);
+      if (want > 1.2 && got < want * 0.35 && Math.hypot(e.push.x, e.push.y) > 95 && !e.def.big && !e.slammed) { e.slammed = true; const sd = Math.round(e.maxHp * 0.12 + 5); e.hp -= sd; e.flash = 0.15; e.state = 'stagger'; e.t = Math.max(e.t, 0.5); sfx.wallHit(); shake = Math.max(shake, 3); hitstop = Math.max(hitstop, 0.06); spark(e.x, e.y - e.r, '#ffd36b'); floater(e.x, e.y - e.r * 2 - 8, 'SLAM ' + sd, '#ffd36b'); if (e.hp <= 0) killEnemy(e); e.push.x = e.push.y = 0; }
+      if (Math.abs(e.push.x) + Math.abs(e.push.y) < 40) e.slammed = false; e.push.x *= Math.pow(0.0005, dt); e.push.y *= Math.pow(0.0005, dt); if (Math.abs(e.push.x) < 2) e.push.x = 0; if (Math.abs(e.push.y) < 2) e.push.y = 0; }
     for (const c in e.cd) e.cd[c] = Math.max(0, e.cd[c] - dt);
     const d = dist(e.x, e.y, P.x, P.y - 4);
     if (!e.aggroed && (d < e.def.aggro || rid !== null)) { e.aggroed = true; if (!PROG.seen[e.id]) { PROG.seen[e.id] = true; toast(`${e.def.name}: SEEN. IT IS IN THE BESTIARY`, 2.2, '#c9b9a0'); } }
@@ -621,7 +654,7 @@ function updateEnemies(dt) {
   enemies = enemies.filter(e => e.alive || e.deadT > 0);
 }
 function startAttack(e) {
-  const n = e.tellKind;
+  const n = e.tellKind; e.hitFlash = 0.09;
   if (n === 'LUNGE' || n === 'BITE' || n === 'SHOVE' || n === 'GRAB') fx.push({ kind: 'slash', x: e.x, y: e.y - 6, ang: e.lockAng, t: 0.16, max: 0.16, dir: 1, r: n === 'SHOVE' ? 20 : 14, col: n === 'GRAB' ? '#8aa0a8' : '#d8dce6' });
   if (n === 'LUNGE') { e.cd.a = 1.6; sfx.lunge(); }
   else if (n === 'BITE') { e.cd.a = 1.0; sfx.bite(); }
@@ -704,12 +737,22 @@ function updatePickups(dt) {
   }
   pickups = pickups.filter(p => !p.gone);
 }
+const wavesDone = {};
+function nextWave() {
+  const w = (area.def.waves || {})[curRoom.id]; const k = `${area.id}:${curRoom.id}`; const n = wavesDone[k] || 0;
+  if (!w || n >= w.length || PROG.cleared[k]) return false;
+  wavesDone[k] = n + 1; sfx.seal(); toast('MORE OF THEM', 1.6, '#ffb347'); shake = Math.max(shake, 2);
+  for (const id of w[n]) { let tx, ty, tries = 0; do { tx = curRoom.x + 2 + Math.floor(Math.random() * (curRoom.w - 4)); ty = curRoom.y + 2 + Math.floor(Math.random() * (curRoom.h - 4)); } while (tries++ < 40 && (solidFor(tx, ty, 'enemy') || dist(tx * TS + 8, ty * TS + 8, P.x, P.y) < 56));
+    const e = spawnEnemy(id, tx * TS + 8, ty * TS + 12, curRoom.id, `wave:${k}:${n}:${tx},${ty}`); e.aggroed = true; e.state = 'stagger'; e.t = 0.6; enemies.push(e); puff(e.x, e.y, 10, dirtOf(e), 60); }
+  return true;
+}
 function updateRooms() {
   if (!curRoom) { sealed = false; return; }
   const live = enemies.some(e => e.alive && e.room === curRoom.id);
   const key = `${area.id}:${curRoom.id}`;
   if (live && !sealed) { sealed = true; sfx.seal(); shake = Math.max(shake, 2);
     const cx = (curRoom.x + curRoom.w / 2) * TS, cy = (curRoom.y + curRoom.h / 2) * TS; const a = Math.atan2(cy - P.y, cx - P.x); P.push.x += Math.cos(a) * 60; P.push.y += Math.sin(a) * 60; }
+  else if (!live && sealed && nextWave()) { /* the room is not done with you */ }
   else if (!live && sealed) { sealed = false; sfx.open(); if (!PROG.cleared[key]) { PROG.cleared[key] = true; toast(`${curRoom.name}: CLEAR`, 2, '#9ad0ff'); if (curRoom.id === 'H') PROG.cleared[key + ':drips'] = true; if (enemies.length === 0 || true) PROG.checkpoint = { area: area.id, at: 'entry' }; save(); } }
   else if (!live && !PROG.cleared[key] && !enemies.some(e => e.room === curRoom.id)) { PROG.cleared[key] = true; if (curRoom.id === 'H') PROG.cleared[key + ':drips'] = true; save(); }
 }
@@ -840,6 +883,7 @@ function updatePause() {
   if (press('back') || press('pause') || (press('menu') && !fromTitle)) { sfx.back(); state = fromTitle ? 'title' : 'play'; if (!fromTitle) save(); return; }
   if (!fromTitle) { if (press('left')) { menu.tab = (menu.tab + 4) % 5; menu.sel = 0; sfx.menu(); } if (press('right')) { menu.tab = (menu.tab + 1) % 5; menu.sel = 0; sfx.menu(); } }
   const tab = TABS[menu.tab];
+  if (tab === 'STATUS') { if (press('take') && P.abilities.claw && P.abilities.lungs) { P.special = P.special === 'lungs' ? 'claw' : 'lungs'; sfx.take(); save(); } }
   if (tab === 'SKILLS') {
     if (press('up')) { menu.sel = (menu.sel + 8) % 9; sfx.menu(); } if (press('down')) { menu.sel = (menu.sel + 1) % 9; sfx.menu(); }
     if (press('take')) { const s = SKILLS[menu.sel]; const prevOk = s.tier === 0 || has(SKILLS.find(x => x.branch === s.branch && x.tier === s.tier - 1).id); if (!has(s.id) && P.pts > 0 && prevOk) { P.skills[s.id] = 1; P.pts--; sfx.skill(); save(); } else sfx.back(); }
@@ -900,7 +944,7 @@ function drawTiles(ox, oy) {
         const floorTile = CAVE.floorGB(hash);
         switch (k) {
           case K.WALL: { const openS = !isWallish(tileAt(x, y + 1)); spr = openS ? (isWallish(tileAt(x, y - 1)) ? CAVE.wallFace() : CAVE.wallFaceBottom()) : CAVE.wallTop(); break; }
-          case K.FLOOR: case K.ROCK: case K.BRAZIER: case K.STAL: case K.CRATE: spr = floorTile; break;
+          case K.FLOOR: case K.ROCK: case K.BRAZIER: case K.STAL: case K.CRATE: case K.POT: spr = floorTile; break;
           case K.MOSS: g.drawImage(floorTile, sx, sy); spr = SPR.mossDecal ? SPR.mossDecal[(x + y) % 3] : null; break;
           case K.DEEP: { const c = cont4(x, y, kk => kk === K.DEEP); spr = c === 15 ? CAVE.water(wf) : CAVE.pool(c); break; }
           case K.SOFT: spr = SPR.soft[(x + y) % 3]; break;
@@ -922,7 +966,7 @@ function drawTiles(ox, oy) {
     if (!spr)
     switch (k) {
       case K.WALL: spr = holl ? SPR.wall[wallMask(x, y)][v] : SPR.grass[0]; break;
-      case K.FLOOR: case K.ROCK: case K.BRAZIER: case K.STAL: case K.CRATE: spr = holl ? SPR.earth[(x * 3 + y * 5) & 3] : SPR.grass[(x * 3 + y * 5) & 3]; break;
+      case K.FLOOR: case K.ROCK: case K.BRAZIER: case K.STAL: case K.CRATE: case K.POT: spr = holl ? SPR.earth[(x * 3 + y * 5) & 3] : SPR.grass[(x * 3 + y * 5) & 3]; break;
       case K.MOSS: spr = SPR.moss[(x + y) % 3]; break;
       case K.FLOWERS: spr = SPR.flowers[v]; break;
       case K.BUSH: case K.STUMP: case K.LAMP: case K.FENCE: spr = SPR.grass[(x * 3 + y * 5) & 3]; break;
@@ -959,6 +1003,7 @@ function drawEnemy(e, ox, oy) {
   if (inWater) { const rp = SPR.ripple[(Math.floor(time * 4) + (e.def.big ? 2 : 0)) % 3]; g.drawImage(rp.canvas, sx - rp.ax, sy - rp.ay - 1); if (e.def.big) g.drawImage(rp.canvas, sx - rp.ax - 8, sy - rp.ay + 1); } else g.drawImage(e.def.big ? SPR.shadowBig : SPR.shadow, sx - (e.def.big ? 12 : 7), sy - 3);
   const bob = (e.moving && fi === 1) ? -1 : 0;
   if (e.state === 'tell') { const p = 0.35 + 0.45 * Math.abs(Math.sin(time * 18)); drawTellRim(fr.canvas, sx - fr.ax, sy - fr.ay + bob, p); }
+  if (e.hitFlash > 0) { e.hitFlash -= 1 / 60; g.globalAlpha = 0.85; g.drawImage(CH.silhouette(fr.canvas, '#ffffff'), sx - fr.ax, sy - fr.ay + bob); g.globalAlpha = 1; }
   g.drawImage(fr.canvas, sx - fr.ax, sy - fr.ay + bob);
   if (e.flash > 0) { g.globalAlpha = Math.min(1, e.flash / 0.12); g.drawImage(CH.silhouette(fr.canvas, '#ffffff'), sx - fr.ax, sy - fr.ay + bob); g.globalAlpha = 1; }
   if (e.def.big && e.hp < e.maxHp) { /* the boss bar carries it */ }
@@ -1011,6 +1056,7 @@ function render() {
   // flat things first
   for (const p of props) if (p.flat) { const s = p.kind === 'puddle' ? SPR.puddle[Math.floor(time * 3) % 3] : p.spr; if (s) g.drawImage(s.canvas, ox + Math.round(p.x - s.ax), oy + Math.round(p.y - s.ay)); }
   for (const e of enemies) if (e.state === 'mark' && e.mark) { const m = SPR.markerBig; g.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(time * 20)); g.drawImage(m.canvas, ox + m.ax * 0 + Math.round(e.mark.x - m.ax), oy + Math.round(e.mark.y - m.ay)); g.globalAlpha = 1; }
+  for (const e of enemies) if (e.alive && e.state === 'tell' && e.tellKind === 'CHARGE' && (!curRoom || e.room === curRoom.id)) { let len = 0; while (len < 340) { const tx = Math.floor((e.x + Math.cos(e.lockAng) * len) / TS), ty = Math.floor((e.y + Math.sin(e.lockAng) * len) / TS); if (solidFor(tx, ty, 'enemy')) break; len += 8; } g.save(); g.translate(ox + e.x, oy + e.y); g.rotate(e.lockAng); g.fillStyle = `rgba(220,40,40,${0.18 + 0.14 * Math.abs(Math.sin(time * 14))})`; g.fillRect(0, -e.r, len, e.r * 2); g.fillStyle = 'rgba(255,80,60,0.6)'; g.fillRect(0, -e.r, len, 1); g.fillRect(0, e.r - 1, len, 1); g.restore(); }
   for (const r of rocks) if (!r.done) { const m = SPR.marker; g.globalAlpha = 0.4 + 0.6 * (r.t / r.mark); g.drawImage(m.canvas, ox + Math.round(r.x - m.ax), oy + Math.round(r.y - m.ay)); g.globalAlpha = 1; }
   // y-sorted
   const objs = [];
@@ -1067,6 +1113,7 @@ function drawHud() {
   if (P.keys) { g.drawImage(SPR.key, BW - 34, 6); text(g, `${P.keys}`, BW - 21, 8, '#f4d35e'); }
   if (P.abilities.claw) { g.drawImage(SPR.clawIcon, BW - 16, 6); }
   if (P.abilities.lungs) { g.drawImage(SPR.lungsIcon, BW - 16, 20); }
+  if (P.abilities.claw || P.abilities.lungs) { const ready = P.specialCd <= 0; text(g, ready ? 'V: ' + (P.special === 'lungs' && P.abilities.lungs ? 'BURST' : 'SWIPE') : '...', BW - 4, 34, ready ? '#e6dcc4' : '#5a4a6a', 1, 'r', '#1b1626'); }
   if (P.pts > 0 && Math.floor(time * 2) % 2) text(g, `${P.pts} POINT${P.pts > 1 ? 'S' : ''} (TAB)`, BW - 4, 20, '#9ad0ff', 1, 'r', '#1b1626');
   for (let i = 0; i < 2; i++) { const id = P.equipped[i]; if (id) g.drawImage(SPR.charm[id], 4 + i * 12, 36); }
   // room / area banner
@@ -1124,7 +1171,7 @@ function drawPause() {
   if (tab === 'STATUS') {
     const rows = [['LEVEL', P.lvl], ['HEART', `${Math.ceil(P.hp)} / ${P.maxHp}`], ['STAMINA', P.maxSt], ['MIGHT', P.might], ['XP', `${P.xp} / ${xpNeed(P.lvl)}`], ['GOLD', P.gold], ['KEYS', P.keys], ['KEEPINGS', P.keepings], ['POINTS', P.pts]];
     rows.forEach(([k, v], i) => { text(g, k, 22, y0 + i * 9, '#c9b9a0'); text(g, String(v), 100, y0 + i * 9, '#f4f0e6'); });
-    text(g, 'ABILITIES', 160, y0, '#c9b9a0'); let yy = y0 + 9; if (P.abilities.claw) { g.drawImage(SPR.clawIcon, 160, yy); text(g, 'THE CLAW: HOLD X AT SOFT EARTH', 174, yy + 3, '#f4f0e6'); yy += 12; } if (P.abilities.lungs) { g.drawImage(SPR.lungsIcon, 160, yy); text(g, 'THE LUNGS: WALK INTO DEEP WATER', 174, yy + 3, '#f4f0e6'); yy += 12; } if (!P.abilities.claw && !P.abilities.lungs) text(g, 'NONE YET. THE WOOD HAS THEM', 160, yy, '#5a4a6a');
+    text(g, 'ABILITIES', 160, y0, '#c9b9a0'); let yy = y0 + 9; if (P.abilities.claw) { g.drawImage(SPR.clawIcon, 160, yy); text(g, 'THE CLAW: HOLD X AT SOFT EARTH', 174, yy + 3, '#f4f0e6'); yy += 12; } if (P.abilities.lungs) { g.drawImage(SPR.lungsIcon, 160, yy); text(g, 'THE LUNGS: WALK INTO DEEP WATER', 174, yy + 3, '#f4f0e6'); yy += 12; } if (!P.abilities.claw && !P.abilities.lungs) text(g, 'NONE YET. THE WOOD HAS THEM', 160, yy, '#5a4a6a'); else text(g, `SPECIAL (V): ${P.special === 'lungs' && P.abilities.lungs ? 'THE BURST' : 'THE SWIPE'}. Z SWAPS`, 160, yy + 4, '#9ad0ff');
     text(g, 'THE WOOD KEEPS WHAT IT TAKES.', 160, BH - 40, '#5a4a6a'); text(g, 'WHAT YOU TAKE FROM THE WOOD, YOU KEEP.', 160, BH - 33, '#5a4a6a');
   } else if (tab === 'SKILLS') {
     text(g, `${P.pts} POINT${P.pts === 1 ? '' : 'S'} TO SPEND`, BW - 18, y0 - 2, '#9ad0ff', 1, 'r');
@@ -1145,7 +1192,7 @@ function drawPause() {
     text(g, 'TILES: ARMM1998 (CC0), GEORGE BAILEY (CC-BY 4.0)', 22, BH - 46, '#5a4a6a');
     text(g, 'PEOPLE: SVETLANA KUSHNARIOVA (CC-BY 3.0)  MUSIC: CC0', 22, BH - 38, '#5a4a6a');
     text(g, 'ESC CLOSES', 22, BH - 30, '#5a4a6a');
-    text(g, 'X CUT  HOLD X HEAVY  C GUARD  TAP C PARRY  Z STEP  SPACE TALK', 22, BH - 22, '#5a4a6a');
+    text(g, 'X CUT  HOLD X HEAVY  C GUARD  TAP C PARRY  Z STEP  X IN A STEP: DASH-CUT  V SPECIAL', 22, BH - 22, '#5a4a6a');
   }
 }
 function drawDead() { g.fillStyle = `rgba(20,4,8,${Math.min(0.7, deadT * 0.6)})`; g.fillRect(0, 0, BW, BH); if (deadT > 0.6) { text(g, 'THE WOOD KEEPS YOU', BW / 2, 70, '#ff6a3a', 2, 'c', '#1b1626'); text(g, `TAKEN BY ${P.lastHurtBy}`, BW / 2, 92, '#c9b9a0', 1, 'c'); if (deadT > 1.2 && Math.floor(time * 3) % 2 === 0) text(g, 'Z: BACK TO THE LAST SAFE PLACE', BW / 2, 112, '#f4f0e6', 1, 'c'); } }
@@ -1184,7 +1231,7 @@ window.HW = {
   newGame() { PROG = progDefaults(); applyProg(); load('wood', 'start'); state = 'play'; tut = null; },
   step(n = 1, dt = 1 / 60) { for (let i = 0; i < n; i++) update(dt); render(); },
   press(code) { keys.add(code); pressed.add(code); }, release(code) { keys.delete(code); },
-  slay(e) { killEnemy(e); }, set god(v) { god = v; }, get god() { return god; }, give: giveItem, save, time: () => time, toast, xpNeed, get rocks() { return rocks; },
+  slay(e) { killEnemy(e); }, set god(v) { god = v; }, get god() { return god; }, give: giveItem, save, time: () => time, toast, xpNeed, get rocks() { return rocks; }, get pickups() { return pickups; }, get props() { return props; },
   bot(opts) { return import('./bot.js').then(m => m.runBot(window.HW, opts || {})); },
 };
 if (new URLSearchParams(location.search).get('bot')) { const go = () => { if (!booted) { setTimeout(go, 100); return; } HW.newGame(); HW.bot().then(r => { window.__botRes = r; console.log('BOT', JSON.stringify(r, null, 1)); }); }; go(); }

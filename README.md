@@ -26,6 +26,7 @@ THE PEDLAR by the road sells a heal, a permanent heart, and charms. Gold comes f
 | X | X | cut (three in a run; the third is a thrust). HOLD: THE HEAVY BLOW. At soft earth with the claw: dig |
 | C | B / bumpers | hold to GUARD. Tap as a blow lands to PARRY |
 | Z | A | step: a short hop the way you press, or back when still (dive, in water) |
+| V | LB | THE SPECIAL: the swipe (claw) or the burst (lungs); swap on the STATUS tab |
 | SPACE / ENTER | Y | talk, open, read, buy |
 | TAB | Select | the pack: status, skills, charms, bestiary, settings |
 | ESC | Start | pause / back |

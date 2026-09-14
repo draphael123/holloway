@@ -20,8 +20,9 @@ export const TS = 16;
 export const CELL_W = 20, CELL_H = 11;
 
 export const K = { WALL: 1, FLOOR: 2, SOFT: 3, MOUND: 4, PIT: 5, GRASS: 6, DIRT: 7, TREE: 8, WATER: 9, PLANK: 10, HOUSE: 11, ROCK: 12, BRAZIER: 13, MOUTH: 14, STAIRS: 15, DEEP: 16, CULVERT: 17,
-  FLOWERS: 18, MOSS: 19, FENCE: 20, CLIFF: 21, STUMP: 22, BUSH: 23, STAL: 24, CRATE: 25, LAMP: 26 };
-export const SOLID = new Set([K.WALL, K.SOFT, K.MOUND, K.TREE, K.WATER, K.HOUSE, K.ROCK, K.BRAZIER, K.DEEP, K.FENCE, K.CLIFF, K.STUMP, K.BUSH, K.STAL, K.CRATE, K.LAMP]);
+  FLOWERS: 18, MOSS: 19, FENCE: 20, CLIFF: 21, STUMP: 22, BUSH: 23, STAL: 24, CRATE: 25, LAMP: 26, POT: 27 };
+export const BREAKABLE = new Set([25, 27]);
+export const SOLID = new Set([K.WALL, K.SOFT, K.MOUND, K.TREE, K.WATER, K.HOUSE, K.ROCK, K.BRAZIER, K.DEEP, K.FENCE, K.CLIFF, K.STUMP, K.BUSH, K.STAL, K.CRATE, K.LAMP, K.POT]);
 // what the ground is under a prop, for drawing
 export const GRASSY = new Set([K.GRASS, K.FLOWERS, K.TREE, K.HOUSE, K.ROCK, K.MOUTH, K.FENCE, K.CLIFF, K.STUMP, K.BUSH, K.LAMP]);
 export const SWIMMABLE = new Set([K.DEEP]);
@@ -338,6 +339,7 @@ export const AREAS = {
     // the door out of H's south wall leads back to the wood, standing under the mouth
     exits: { 'H:s': { to: 'wood', at: 'mouth' } },
     boss: 'brock', mini: 'digger', keeping: 'THE BROCK\'S HEART', verb: 'dig', hazard: 'rock',
+    waves: { B: [['rat', 'rat', 'imp']], F: [['imp', 'imp']] },
     won: { title: 'THE WARREN IS DONE', lines: ['The Pell boy was in the Brock\'s chamber, under a heap of what the wood had kept: lanterns, a goat bell, a warden\'s cap.', 'He would not say what he saw. You carry him up the throat and out into the light.', 'You kept THE CLAW. You kept THE BROCK\'S HEART. That is the law.'] },
     // the intended route, for the bot and the audit's staged reachability
     route: [
@@ -351,6 +353,7 @@ export const AREAS = {
     rooms: MERE_ROOMS, chests: MERE_CHESTS, mounds: MERE_MOUNDS, signs: {},
     exits: { 'H:s': { to: 'wood', at: 'culvert' } },
     boss: 'pike', mini: 'eelwife', keeping: 'THE OLD PIKE\'S HEART', verb: 'swim', hazard: 'spout',
+    waves: { B: [['newt', 'newt', 'drowned']], F: [['newt', 'newt']] },
     won: { title: 'THE MERE IS DONE', lines: ['Under the Pike there was a drowned chapel, and in it, the things the stream had taken for a hundred years: a bell, a ring, a whole cart.', 'And a mask. You leave the mask.', 'You kept THE LUNGS. You kept THE OLD PIKE\'S HEART. That is the law.'] },
     route: [
       { room: 'H', do: 'clear' }, { room: 'E', do: 'clear' }, { room: 'B', do: 'clear' }, { room: 'A', do: 'clear' }, { room: 'A', do: 'chest' },
@@ -442,7 +445,7 @@ function dress(area) {
       const solidOk = !holl || placed % 3 === 2; // in a room every third piece may be solid; the wood is looser
       const r = rnd();
       if (holl) {
-        if (solidOk && r < 0.25 && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => open(x + dx, y + dy) && !taken.has((x + dx) + ',' + (y + dy)))) area.tiles[y * area.W + x] = r < 0.15 ? K.STAL : K.CRATE;
+        if (solidOk && r < 0.25 && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => open(x + dx, y + dy) && !taken.has((x + dx) + ',' + (y + dy)))) area.tiles[y * area.W + x] = r < 0.1 ? K.STAL : r < 0.18 ? K.CRATE : K.POT;
         else if (r < 0.5) area.tiles[y * area.W + x] = K.MOSS;
         else area.ents.push({ kind: 'deco', sub: r < 0.75 ? 'mushroom' : r < 0.9 ? 'roots' : 'puddle', x, y, room: R.id });
       } else {

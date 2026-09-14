@@ -26,6 +26,15 @@
 - Cave music in the warren (it had been playing the wood's theme) and a crystal-cave loop in the mere.
 - Denser dungeon dressing: stalactites, rubble, glowing crystals, moss, puddles, crates.
 
+## Done from the Hades note
+- Dash-strike: X during the step, or within a beat after it, is a fast lunging cut (x1.3).
+- Heavier hits: longer hitstop on the thrust and heavy, bigger shoves; a goblin shoved into a wall takes SLAM damage and staggers.
+- THE SPECIAL on V (pad LB): THE SWIPE from the claw (a wide heavy arc) or THE BURST from the lungs (a ring that shoves and staggers everything near you). Z on the STATUS tab swaps them. 25 stamina, its own cooldown.
+- Second waves in the crowd rooms and the archers' vein of both holloways.
+- Tells: a white flash the instant a blow lands; the Brock's charge lane is painted red during the wind-up.
+- Crates and pots break under the sword: 40% gold, 15% a heart.
+- Levelling up restores full health.
+
 ## Known and open (round 2)
 - The bot beats the warren; in the mere it reaches the pike but does not kill it inside its budget (it never
   wades in after it, so it waits for surges and snaps). A person will not have that problem, but the pike's
