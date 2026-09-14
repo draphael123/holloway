@@ -1,7 +1,7 @@
-// npc_chars.js — SNES-RPG people in the Chrono Trigger manner: 16 wide × 28 tall, a big head with lit and
-// shadowed hair, three-tone cloth, a belt, a proper stride. 3 facings × 3 walk frames, auto-outlined.
-// Left = flipped right. Keys: h hair, H hair shade, i hair light, s skin, S skin shade, e eye, w eye-white,
-// t tunic, T tunic shade, u tunic light, p pants, P pants shade, b boots, a accent (collar/belt), c hat, C hat shade
+// npc_chars.js — SNES-RPG people in the Chrono Trigger manner: 16 wide × 32 tall (two tiles and a bit), a big
+// head with lit and shadowed hair, three-tone cloth, a belt, long legs and a proper stride. 3 facings × 3 walk
+// frames, auto-outlined. Left = flipped right. Keys: h hair, H hair shade, i hair light, s skin, S skin shade,
+// e eye, w eye-white, t tunic, T tunic shade, u tunic light, p pants, P pants shade, b boots, a accent, c hat, C hat shade
 import { fromGrid, outline, flipX, shade } from './px.js';
 
 const W = 16;
@@ -26,8 +26,10 @@ const BODY = {
     '..suutttttttTs..',
     '..sutttttttttTs.',
     '..SutttttttttTS.',
+    '..SutttttttttTS.',
     '...aaaaaaaaaa...',
     '...uttttttttTT..',
+    '...ttttttttttT..',
     '...ttttttttttT..',
   ],
   up: [
@@ -50,8 +52,10 @@ const BODY = {
     '..suutttttttTs..',
     '..sutttttttttTs.',
     '..SutttttttttTS.',
+    '..SutttttttttTS.',
     '...aaaaaaaaaa...',
     '...uttttttttTT..',
+    '...ttttttttttT..',
     '...ttttttttttT..',
   ],
   side: [
@@ -73,7 +77,9 @@ const BODY = {
     '.....uttttttT...',
     '.....utttssttT..',
     '.....uTttsstT...',
+    '.....uTtttttT...',
     '.....aaaaaaaa...',
+    '......ttttttT...',
     '......ttttttT...',
     '......ttttttT...',
     '......ttttttT...',
@@ -81,26 +87,26 @@ const BODY = {
 };
 const LEGS = {
   down: [
-    ['...pppp..pppP...', '...pppp..pppP...', '...PPPP..PPPP...', '...bbbb..bbbb...', '...bbbb..bbbb...', '..bbbbb..bbbbb..'],
-    ['...pppp..pppP...', '...PPPP..pppP...', '...bbbb..PPPP...', '...bbbb..bbbb...', '..bbbbb..bbbb...', '.........bbbbb..'],
-    ['...pppp..pppP...', '...pppp..PPPP...', '...PPPP..bbbb...', '...bbbb..bbbb...', '...bbbb..bbbbb..', '..bbbbb.........'],
+    ['...pppp..pppP...', '...pppp..pppP...', '...pppp..pppP...', '...PPPP..PPPP...', '...bbbb..bbbb...', '...bbbb..bbbb...', '...bbbb..bbbb...', '..bbbbb..bbbbb..'],
+    ['...pppp..pppP...', '...pppp..pppP...', '...PPPP..pppP...', '...bbbb..PPPP...', '...bbbb..bbbb...', '..bbbbb..bbbb...', '..bbbbb..bbbbb..', '.........bbbbb..'],
+    ['...pppp..pppP...', '...pppp..pppP...', '...pppp..PPPP...', '...PPPP..bbbb...', '...bbbb..bbbb...', '...bbbb..bbbbb..', '..bbbbb..bbbbb..', '..bbbbb.........'],
   ],
   side: [
-    ['......pppppP....', '......pppppP....', '......PPPPPP....', '......bbbbbb....', '......bbbbbb....', '.....bbbbbbbb...'],
-    ['......pppppP....', '.....ppppp.ppp..', '....ppp....ppp..', '....PP......PP..', '...bbb......bbb.', '..bbbb......bbbb'],
-    ['......pppppP....', '......pppppP....', '......PPPPPP....', '.....bbbbb......', '.....bbbbb......', '......bbbbbbb...'],
+    ['......pppppP....', '......pppppP....', '......pppppP....', '......PPPPPP....', '......bbbbbb....', '......bbbbbb....', '......bbbbbb....', '.....bbbbbbbb...'],
+    ['......pppppP....', '......pppppP....', '.....ppppp.ppp..', '....ppp....ppp..', '....PP......PP..', '...bbb......bbb.', '...bbb......bbb.', '..bbbb......bbbb'],
+    ['......pppppP....', '......pppppP....', '......pppppP....', '......PPPPPP....', '.....bbbbb......', '.....bbbbb......', '.....bbbbb......', '......bbbbbbb...'],
   ],
 };
 const SKIRT = {
   down: [
-    ['...pppppppppP...', '...pppppppppP...', '..ppppppppppPP..', '..ppppppppppPP..', '.ppppppppppppPP.', '...bb......bb...'],
-    ['...pppppppppP...', '...pppppppppP...', '..ppppppppppPP..', '..ppppppppppPP..', '.ppppppppppppPP.', '..bb........bb..'],
-    ['...pppppppppP...', '...pppppppppP...', '..ppppppppppPP..', '..ppppppppppPP..', '.ppppppppppppPP.', '.....bbbb.......'],
+    ['...pppppppppP...', '...pppppppppP...', '..ppppppppppPP..', '..ppppppppppPP..', '..ppppppppppPP..', '.ppppppppppppPP.', '.ppppppppppppPP.', '...bb......bb...'],
+    ['...pppppppppP...', '...pppppppppP...', '..ppppppppppPP..', '..ppppppppppPP..', '..ppppppppppPP..', '.ppppppppppppPP.', '.ppppppppppppPP.', '..bb........bb..'],
+    ['...pppppppppP...', '...pppppppppP...', '..ppppppppppPP..', '..ppppppppppPP..', '..ppppppppppPP..', '.ppppppppppppPP.', '.ppppppppppppPP.', '.....bbbb.......'],
   ],
   side: [
-    ['......pppppp....', '......pppppp....', '.....ppppppP....', '.....pppppppP...', '....ppppppppP...', '.......bbb......'],
-    ['......pppppp....', '......pppppp....', '.....ppppppP....', '.....pppppppP...', '....ppppppppP...', '.....bbb..bb....'],
-    ['......pppppp....', '......pppppp....', '.....ppppppP....', '.....pppppppP...', '....ppppppppP...', '.......bbbb.....'],
+    ['......pppppp....', '......pppppp....', '.....ppppppP....', '.....ppppppP....', '.....pppppppP...', '....ppppppppP...', '....ppppppppP...', '.......bbb......'],
+    ['......pppppp....', '......pppppp....', '.....ppppppP....', '.....ppppppP....', '.....pppppppP...', '....ppppppppP...', '....ppppppppP...', '.....bbb..bb....'],
+    ['......pppppp....', '......pppppp....', '.....ppppppP....', '.....ppppppP....', '.....pppppppP...', '....ppppppppP...', '....ppppppppP...', '.......bbbb.....'],
   ],
 };
 const HAT = {

@@ -314,7 +314,7 @@ function updateCamera(dt) {
 }
 function enterRoom(r) {
   const prev = curRoom; curRoom = r;
-  if (prev && r && prev !== r) { cam.fx = cam.x; cam.fy = cam.y; const t = camTarget(); cam.tx = t.x; cam.ty = t.y; cam.slide = 0.4; state = 'slide'; roomBanner = { t: 2.2, name: r.name }; projectiles = []; rocks = []; P.abuf = 0; }
+  if (prev && r && prev !== r) { cam.fx = cam.x; cam.fy = cam.y; const t = camTarget(); cam.tx = t.x; cam.ty = t.y; cam.slide = 0.28; state = 'slide'; roomBanner = { t: 2.2, name: r.name }; projectiles = []; rocks = []; P.abuf = 0; }
   if (r) { const b = enemies.find(e => e.def.boss && e.alive && e.room === r.id); if (b) { toast(`${b.def.name}`, 3, '#ff6a3a'); sfx.roar(); shake = 6; } const m = enemies.find(e => e.def.mini && e.alive && e.room === r.id); if (m) { toast(`${m.def.name}`, 2.5, '#ffb347'); sfx.tellBig(); } }
 }
 
@@ -390,7 +390,7 @@ function updatePlayer(dt) {
       if (press('roll') && P.st >= rollCost() * (god ? 0 : 1)) {
         if (spend(P.swim && wearing('eelskin') ? 6 : rollCost())) { P.roll = P.rollDur; const a = len ? Math.atan2(my, mx) : FACE_ANG[P.facing]; P.rdx = Math.cos(a); P.rdy = Math.sin(a); if (len) P.facing = faceOf(mx, my); P.guard = false; P.parryT = 0; sfx.roll(); puff(P.x, P.y, 5, '#c9b9a0', 30); }
       } else if (len) {
-        const sp = 84 * speedMul() * (P.guard ? 0.5 : 1) * (P.swim ? (wearing('eelskin') ? 0.75 : 0.55) : 1);
+        const sp = 72 * speedMul() * (P.guard ? 0.5 : 1) * (P.swim ? (wearing('eelskin') ? 0.75 : 0.55) : 1);
         const bx = P.x, by = P.y; moveBox(P, mx * sp * dt, my * sp * dt, P_HW, P_HH, 'player');
         P.facing = pickFacing(mx, my, P.facing);
         // the stride is measured in ground covered, not time, so the feet never slide
@@ -768,7 +768,7 @@ function update(rawDt) {
       updatePlayer(dt); updateEnemies(dt); updateProjectiles(dt); updatePickups(dt); updateRooms(); updateNpcs(dt); updateFx(dt); updateCamera(dt); updateTutorial(rawDt);
       if (press('menu') || press('pause')) { state = 'pause'; menu = { tab: press('menu') ? 1 : 0, sel: 0, sub: 0 }; sfx.menu(); }
       break;
-    case 'slide': updateCamera(rawDt); updateFx(dt); break;
+    case 'slide': updatePlayer(dt); updateCamera(rawDt); updateFx(dt); break; // you keep walking while the room slides; the room waits
     case 'talk': updateTalk(rawDt); updateFx(dt); updateNpcs(dt); break;
     case 'pause': updatePause(); updateFx(dt); break;
     case 'shop': updateShop(); updateFx(dt); updateNpcs(dt); break;
