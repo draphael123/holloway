@@ -12,6 +12,12 @@
 - Enemies are goblins: cutter, whelp, slinger (stones), shieldbearer, bog goblin, drowned goblin. Bosses stay beasts.
 - Combat sounds are recorded CC0 samples (audio/sfx), synth as fallback.
 
+## Done from the second playtest note ("low detail, sparse")
+- Environment: ArMM1998's painted CC0 tileset (grass, path, stream, cliffs, trees, bushes, stumps, rocks, fence, lodge, cave mouth, cave walls). `src/tileset.js` maps the sheet cells.
+- Hero and villagers at Chrono fidelity: four tones per material, coloured outline, eye whites, folds, buckle, scabbard, four-frame stride.
+- Every screen auto-dressed to a density target at parse time; `node tools/quality.mjs` prints props per 100 tiles per room.
+- The wood has a two-row cliff along the top with the warren mouth cut into it.
+
 ## Known and open (round 2)
 - The bot beats the warren; in the mere it reaches the pike but does not kill it inside its budget (it never
   wades in after it, so it waits for surges and snaps). A person will not have that problem, but the pike's
@@ -23,6 +29,7 @@
   on real hardware; the pane has no pad.
 - The Brock and the Digger are hand-pixelled text grids now (`BROCK_DOWN`, `DIGGER_SIDE` in chars.js), the
   mere's four creatures are still procedural. If the pixel pass reads better, do the pike and the eelwife.
+- The cave sheet has no true floor; holloways keep the baked earth. George Bailey's CC-BY cave set is downloaded in the scratchpad if we want painted cave floors and ring walls (attribution required).
 - Only two music loops: the wood's theme and the descent (both holloways). A third for boss rooms would help.
 
 ## Holloway three candidates

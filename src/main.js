@@ -4,8 +4,9 @@ import * as ART from './art.js';
 import * as DA from './dungeon_art.js';
 import * as CH from './chars.js';
 import * as GB from './goblins.js';
+import { T as TSET, OVER, CAVE, loadTileset } from './tileset.js';
 import { text, textW, wrap, fitText } from './font.js';
-import { AREAS, parseArea, roomDoors, K, SOLID, DIGGABLE, SWIMMABLE, CELL_W, CELL_H } from './world.js';
+import { AREAS, parseArea, roomDoors, K, SOLID, DIGGABLE, SWIMMABLE, GRASSY, CELL_W, CELL_H } from './world.js';
 import { boot as audioBoot, sfx, settings as AUD, apply as audioApply, playMusic, stopMusic } from './audio.js';
 
 const BW = 320, BH = 180, TS = 16;
@@ -166,7 +167,8 @@ function bakeAll() {
   SPR.deep = SPR.water.map(frames => frames.map((w, f) => DA.bakeDeep(w, f)));
   SPR.lungsIcon = (() => { const [c, g] = canvas(12, 12); g.fillStyle = '#4a7a68'; g.fillRect(1, 3, 4, 8); g.fillRect(7, 3, 4, 8); g.fillStyle = '#7ab6a0'; g.fillRect(2, 4, 2, 3); g.fillRect(8, 4, 2, 3); g.fillStyle = '#e6dcc4'; g.fillRect(5, 1, 2, 6); return outline(c, '#1b1626'); })();
   SPR.trees = [0, 1, 2, 3, 4, 5].map(i => ART.bakeTree(700 + i, i >= 4)); SPR.bush = [0, 1, 2].map(i => ART.bakeBush(800 + i));
-  SPR.signpost = ART.bakeSignpost(); SPR.stall = ART.bakeStall('#c9452e'); SPR.butterfly = [['#f4d35e', 0], ['#f4d35e', 1], ['#fbf6ea', 0], ['#fbf6ea', 1]].map(([c, f]) => ART.bakeButterfly(f, c));
+  SPR.signpost = ART.bakeSignpost(); SPR.stall = ART.bakeStall('#c9452e'); SPR.lamp = ART.bakeLamp(); SPR.crate = ART.bakeCrate();
+  SPR.moss = [0, 1, 2].map(i => DA.bakeMoss(SPR.earth[i], 500 + i)); SPR.mossDecal = [0, 1, 2].map(i => { const [c, gg] = canvas(16, 16); const rnd = mulberry(700 + i); for (let n = 0; n < 28; n++) { const x = Math.floor(rnd() * 16), y = Math.floor(rnd() * 16); gg.fillStyle = rnd() < 0.3 ? '#4a7a3a' : '#3a6a34'; gg.fillRect(x, y, 1, 1); if (rnd() < 0.4) { gg.fillStyle = '#5a8a44'; gg.fillRect(x + 1, y, 1, 1); } } return c; }); SPR.mushrooms = [0, 1, 2].map(i => DA.bakeMushrooms(520 + i)); SPR.roots = [0, 1].map(i => DA.bakeRoots(540 + i)); SPR.puddle = [0, 1, 2].map(f => DA.bakePuddle(f)); SPR.tallgrass = [0, 1, 2].map(i => DA.bakeTallGrass(560 + i)); SPR.stump = [0, 1].map(i => DA.bakeStump(580 + i)); SPR.stal = [0, 1, 2].map(i => DA.bakeStalagmite(600 + i)); SPR.cliffTop = [0, 1].map(i => DA.bakeCliffTop(620 + i)); SPR.cliffFace = [0, 1].map(i => DA.bakeCliffFace(640 + i)); SPR.fenceTile = DA.bakeFenceTile(); SPR.butterfly = [['#f4d35e', 0], ['#f4d35e', 1], ['#fbf6ea', 0], ['#fbf6ea', 1]].map(([c, f]) => ART.bakeButterfly(f, c));
   SPR.bubble = outline(fromGrid(['.wwwww.', 'wwwwwww', 'ww.w.ww', 'wwwwwww', '.wwwww.', '..ww...', '..w....'], { w: '#fff8e8' }, 1));
   SPR.house = ART.bakeBuilding({ w: 4, d: 3, H: 28, wall: { lit: '#efe3c8', timber: '#6e4a2e' }, roof: { lite: '#e6c46e', mid: '#c49a3f', dark: '#8a6a2a' }, chimney: true, door: { u: 1.5 }, windows: [{ u: 0.3, v: 10, box: true }, { u: 3.0, v: 10, shutters: true }] });
 }
@@ -267,18 +269,25 @@ function load(areaId, at = 'start') {
       case 'dripspot': drips.push({ x: cx, y: cy - 8, room: e.room }); break;
       case 'mouth': mouthAt = { x: e.x, y: e.y }; if (at === 'mouth' && !start) start = { x: e.x * TS + 16, y: (e.y + 2) * TS + 4 }; break;
       case 'culvert': if (!culvertAt) { culvertAt = { x: e.x, y: e.y }; if (at === 'culvert' && !start) start = { x: e.x * TS + 16, y: e.y * TS - 4 }; } break;
+      case 'deco': { const sx = (e.x * 7 + e.y * 3); const spr = e.sub === 'mushroom' ? SPR.mushrooms[sx % 3] : e.sub === 'roots' ? SPR.roots[sx % 2] : e.sub === 'tallgrass' ? SPR.tallgrass[sx % 3] : null; props.push({ kind: e.sub, x: cx, y: cy - 2, spr, flat: e.sub !== 'mushroom' && e.sub !== 'tallgrass', anim: e.sub === 'puddle' }); break; }
       case 'npc': npcs.push({ x: cx, y: cy - 2, def: e.def, frames: CH.bakeCharacter(e.def.look), facing: 'down', walk: 0, moving: false, homeX: cx, homeY: cy - 2, wait: 1 + rnd() * 2, tx: cx, ty: cy - 2 }); break;
     }
   }
   // tile-anchored props
   for (let ty = 0; ty < area.H; ty++) for (let tx = 0; tx < area.W; tx++) {
     const k = tileAt(tx, ty); const cx = tx * TS + 8, cy = ty * TS + 16;
-    if (k === K.ROCK) props.push({ kind: 'rock', x: cx, y: cy - 1, spr: SPR.rock[(tx * 3 + ty) % 3] });
+    if (k === K.ROCK) props.push({ kind: 'rock', x: cx, y: cy - 1, spr: TSET.ready ? (def.kind === 'holloway' ? SPR.rockCave : SPR.rockWood) : SPR.rock[(tx * 3 + ty) % 3] });
     else if (k === K.BRAZIER) props.push({ kind: 'brazier', x: cx, y: cy - 1, anim: true });
     else if (k === K.TREE) { const big = ((tx * 7 + ty * 13) % 5) === 0; props.push({ kind: 'tree', x: cx + ((tx * 5) % 3) - 1, y: cy + ((ty * 3) % 3) - 1, spr: SPR.trees[big ? 4 + (tx % 2) : (tx + ty) % 4], big: true }); }
+    else if (k === K.BUSH) props.push({ kind: 'bush', x: cx, y: cy - 1, spr: SPR.bush[(tx + ty) % 3] });
+    else if (k === K.STUMP) props.push({ kind: 'stump', x: cx, y: cy - 1, spr: SPR.stump[(tx * 3 + ty) % 2] });
+    else if (k === K.STAL) props.push({ kind: 'stal', x: cx, y: cy - 1, spr: SPR.stal[(tx + ty * 5) % 3] });
+    else if (k === K.CRATE) props.push({ kind: 'crate', x: cx, y: cy - 1, spr: SPR.crate });
+    else if (k === K.LAMP) props.push({ kind: 'lamp', x: cx, y: cy - 1, spr: SPR.lamp });
+    else if (k === K.FENCE) props.push({ kind: 'fence', x: cx, y: cy - 1, spr: SPR.fenceTile });
   }
-  for (const h of (def.houses || [])) props.push({ kind: 'house', x: h.x * TS, y: (h.y + h.d) * TS, spr: SPR.house, house: h });
-  if (mouthAt) props.push({ kind: 'mouth', x: mouthAt.x * TS + 16, y: (mouthAt.y + 1) * TS + 2, spr: SPR.mouth, flat: true });
+  for (const h of (def.houses || [])) props.push({ kind: 'house', x: h.x * TS, y: (h.y + h.d) * TS, spr: SPR.house, house: h, tile: true });
+  if (mouthAt) props.push({ kind: 'mouth', x: mouthAt.x * TS + 16, y: (mouthAt.y + 1) * TS + 2, get spr() { return TSET.ready ? SPR.mouthTile : SPR.mouth; }, flat: true });
   if (culvertAt) props.push({ kind: 'culvert', x: culvertAt.x * TS + 16, y: (culvertAt.y + 1) * TS + 2, get spr() { return SPR.culvert[PROG.quest.warren ? 1 : 0]; }, flat: true });
   for (const n of npcs) if (n.def.shop) props.push({ kind: 'stall', x: n.x, y: n.y - 14, spr: SPR.stall });
   if (!start) start = { x: 8 * TS, y: 8 * TS };
@@ -853,21 +862,68 @@ function updatePause() {
 // RENDER
 // ---------------------------------------------------------------------------------------------
 function drawSprite(fr, x, y, flipTint = null) { g.drawImage(fr.canvas, Math.round(x - fr.ax), Math.round(y - fr.ay)); }
+const sandCache = new Map();
+function sandPath(cont, v) { // cont = where the path continues; the other sides get grass creeping in
+  const key = cont + ':' + v; let c = sandCache.get(key); if (c) return c;
+  const [cv, g] = canvas(TS, TS); g.drawImage(OVER.sand(15), 0, 0); g.globalCompositeOperation = 'multiply'; g.fillStyle = 'rgb(214,190,150)'; g.fillRect(0, 0, TS, TS); g.globalCompositeOperation = 'source-over';
+  const gt = OVER.grass().getContext('2d').getImageData(0, 0, 16, 16).data; const pick = i => `rgb(${gt[i * 4]},${gt[i * 4 + 1]},${gt[i * 4 + 2]})`;
+  const base = pick(5), dark = pick(37); const rnd = mulberry(900 + cont * 7 + v);
+  const depth = () => 1 + Math.floor(rnd() * 3);
+  for (let u = 0; u < TS; u++) {
+    if (!(cont & 1)) { const d = depth(); for (let k = 0; k < d; k++) { g.fillStyle = k === d - 1 ? dark : base; g.fillRect(u, k, 1, 1); } }
+    if (!(cont & 4)) { const d = depth(); for (let k = 0; k < d; k++) { g.fillStyle = k === d - 1 ? dark : base; g.fillRect(u, TS - 1 - k, 1, 1); } }
+    if (!(cont & 8)) { const d = depth(); for (let k = 0; k < d; k++) { g.fillStyle = k === d - 1 ? dark : base; g.fillRect(k, u, 1, 1); } }
+    if (!(cont & 2)) { const d = depth(); for (let k = 0; k < d; k++) { g.fillStyle = k === d - 1 ? dark : base; g.fillRect(TS - 1 - k, u, 1, 1); } }
+  }
+  sandCache.set(key, cv); return cv;
+}
 function drawTiles(ox, oy) {
   const wf = Math.floor(time * 5) % 4;
   const x0 = Math.max(0, Math.floor(-ox / TS)), y0 = Math.max(0, Math.floor(-oy / TS)), x1 = Math.min(area.W - 1, Math.ceil((-ox + BW) / TS)), y1 = Math.min(area.H - 1, Math.ceil((-oy + BH) / TS));
   const holl = area.def.kind === 'holloway';
   const wallMask = (x, y) => { let m = 0; if (tileAt(x, y - 1) !== K.WALL) m |= 1; if (tileAt(x + 1, y) !== K.WALL) m |= 2; if (tileAt(x, y + 1) !== K.WALL) m |= 4; if (tileAt(x - 1, y) !== K.WALL) m |= 8; return m; };
   const pitMask = (x, y) => { let m = 0; if (tileAt(x, y - 1) !== K.PIT) m |= 1; if (tileAt(x + 1, y) !== K.PIT) m |= 2; if (tileAt(x, y + 1) !== K.PIT) m |= 4; if (tileAt(x - 1, y) !== K.PIT) m |= 8; return m; };
-  const grassy = k => k === K.GRASS || k === K.TREE || k === K.HOUSE || k === K.ROCK || k === K.MOUTH;
+  const grassy = k => GRASSY.has(k);
   const dirtMask = (x, y) => { let m = 0; if (grassy(tileAt(x, y - 1))) m |= 1; if (grassy(tileAt(x + 1, y))) m |= 2; if (grassy(tileAt(x, y + 1))) m |= 4; if (grassy(tileAt(x - 1, y))) m |= 8; return m; };
   const waterMask = (x, y) => { let m = 0; const w = k => k === K.WATER || k === K.PLANK || k === K.DEEP || k === K.CULVERT; if (!w(tileAt(x, y - 1))) m |= 1; if (!w(tileAt(x + 1, y))) m |= 2; if (!w(tileAt(x, y + 1))) m |= 4; if (!w(tileAt(x - 1, y))) m |= 8; return m; };
+  const cont4 = (x, y, same) => { let m = 0; if (same(tileAt(x, y - 1))) m |= 1; if (same(tileAt(x + 1, y))) m |= 2; if (same(tileAt(x, y + 1))) m |= 4; if (same(tileAt(x - 1, y))) m |= 8; return m; };
+  const isDirt = k => k === K.DIRT || k === K.PLANK; const isWaterish = k => k === K.WATER || k === K.PLANK || k === K.CULVERT || k === K.DEEP; const isCliff = k => k === K.CLIFF || k === K.MOUTH; const isWallish = k => k === K.WALL;
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const k = tileAt(x, y); const sx = ox + x * TS, sy = oy + y * TS; const v = (x * 7 + y * 13) & 1;
     let spr = null;
+    if (TSET.ready) {
+      const hash = (x * 73 + y * 151) % 11;
+      if (holl) {
+        const floorTile = SPR.earth[(x * 3 + y * 5) & 3];
+        switch (k) {
+          case K.WALL: { const openS = !isWallish(tileAt(x, y + 1)); spr = openS ? (isWallish(tileAt(x, y - 1)) ? CAVE.wallFace() : CAVE.wallFaceBottom()) : CAVE.wallTop(); break; }
+          case K.FLOOR: case K.ROCK: case K.BRAZIER: case K.STAL: case K.CRATE: spr = floorTile; break;
+          case K.MOSS: g.drawImage(floorTile, sx, sy); spr = SPR.mossDecal ? SPR.mossDecal[(x + y) % 3] : null; break;
+          case K.DEEP: { const c = cont4(x, y, kk => kk === K.DEEP); spr = c === 15 ? CAVE.water(wf) : CAVE.pool(c); break; }
+          case K.SOFT: spr = SPR.soft[(x + y) % 3]; break;
+          case K.MOUND: g.drawImage(SPR.soft[(x + y) % 3], sx, sy); spr = SPR.mound; break;
+          case K.PIT: spr = SPR.pit[pitMask(x, y)]; break;
+        }
+      } else {
+        const grassTile = hash < 7 ? OVER.grass() : OVER.grassVar(hash);
+        switch (k) {
+          case K.GRASS: case K.TREE: case K.HOUSE: case K.ROCK: case K.BUSH: case K.STUMP: case K.LAMP: case K.FENCE: spr = grassTile; break;
+          case K.FLOWERS: g.drawImage(grassTile, sx, sy); spr = OVER.flowers(v); break;
+          case K.DIRT: spr = sandPath(cont4(x, y, isDirt), (x * 5 + y * 3) % 4); break;
+          case K.PLANK: spr = OVER.plank(); break;
+          case K.WATER: case K.CULVERT: spr = OVER.water(wf); break;
+          case K.CLIFF: case K.MOUTH: { const c = cont4(x, y, isCliff); if (c & 4) spr = OVER.cliffTop(c); else spr = OVER.cliffFace(2, !(c & 8) ? 0 : !(c & 2) ? 2 : 1); break; }
+        }
+      }
+    }
+    if (!spr)
     switch (k) {
       case K.WALL: spr = holl ? SPR.wall[wallMask(x, y)][v] : SPR.grass[0]; break;
-      case K.FLOOR: case K.ROCK: case K.BRAZIER: spr = holl ? SPR.earth[(x * 3 + y * 5) & 3] : SPR.grass[(x * 3 + y * 5) & 3]; break;
+      case K.FLOOR: case K.ROCK: case K.BRAZIER: case K.STAL: case K.CRATE: spr = holl ? SPR.earth[(x * 3 + y * 5) & 3] : SPR.grass[(x * 3 + y * 5) & 3]; break;
+      case K.MOSS: spr = SPR.moss[(x + y) % 3]; break;
+      case K.FLOWERS: spr = SPR.flowers[v]; break;
+      case K.BUSH: case K.STUMP: case K.LAMP: case K.FENCE: spr = SPR.grass[(x * 3 + y * 5) & 3]; break;
+      case K.CLIFF: spr = tileAt(x, y + 1) === K.CLIFF ? SPR.cliffTop[v] : SPR.cliffFace[v]; break;
       case K.SOFT: spr = SPR.soft[(x + y) % 3]; break;
       case K.MOUND: g.drawImage(SPR.soft[(x + y) % 3], sx, sy); spr = SPR.mound; break;
       case K.PIT: spr = SPR.pit[pitMask(x, y)]; break;
@@ -878,6 +934,7 @@ function drawTiles(ox, oy) {
       case K.PLANK: spr = SPR.plank; break;
     }
     if (spr) g.drawImage(spr, sx, sy);
+    if (TSET.ready && !holl && (k === K.WATER || k === K.CULVERT)) { const c = cont4(x, y, isWaterish); if (!(c & 1)) { g.fillStyle = '#d6ecf8'; g.fillRect(sx, sy, TS, 1); g.fillStyle = '#5d9be0'; for (let i = ((x * 3 + wf) % 4); i < TS; i += 4) g.fillRect(sx + i, sy + 1, 2, 1); } if (!(c & 4)) { g.fillStyle = '#d6ecf8'; g.fillRect(sx, sy + TS - 1, TS, 1); } }
     if (holl && k !== K.WALL && tileAt(x, y - 1) === K.WALL) { g.fillStyle = 'rgba(8,6,16,0.32)'; g.fillRect(sx, sy, TS, 4); g.fillStyle = 'rgba(8,6,16,0.14)'; g.fillRect(sx, sy + 4, TS, 3); }
     if (holl && k !== K.WALL && tileAt(x - 1, y) === K.WALL) { g.fillStyle = 'rgba(8,6,16,0.16)'; g.fillRect(sx, sy, 3, TS); }
     if (stairsAt && stairsAt.x === x && stairsAt.y === y && PROG.cleared[`${area.id}:${stairsAt.room}`]) g.drawImage(SPR.stairs, sx, sy);
@@ -903,7 +960,7 @@ function drawEnemy(e, ox, oy) {
   else if (e.hp < e.maxHp && e.aggroed) { const w = 14; g.fillStyle = '#1b1626'; g.fillRect(sx - w / 2 - 1, sy - fr.canvas.height - 3, w + 2, 3); g.fillStyle = '#e0433a'; g.fillRect(sx - w / 2, sy - fr.canvas.height - 2, Math.round(w * e.hp / e.maxHp), 1); }
 }
 function drawHero(ox, oy) {
-  const set = SPR.hero[P.facing]; const phase = Math.floor(P.walk * 2) % 4; const fr = P.moving ? set[[0, 1, 0, 2][phase]] : set[0];
+  const set = SPR.hero[P.facing]; const phase = Math.floor(P.walk * 2) % 4; const fr = P.moving ? set[phase] : set[0];
   const sx = ox + Math.round(P.x), sy = oy + Math.round(P.y);
   if (P.swim) { const rp = SPR.ripple[Math.floor(time * 4) % 3]; g.drawImage(rp.canvas, sx - rp.ax, sy - rp.ay - 1); } else g.drawImage(SPR.shadow, sx - 7, sy - 3);
   if (P.inv > 0 && !P.dead && Math.floor(time * 24) % 2 === 0 && P.roll <= 0) g.globalAlpha = 0.45;
@@ -944,14 +1001,14 @@ function render() {
     for (let i = 0; i < 12; i++) { const t = time + i * 2.3; const bx = ((i * 97) % (area.W * TS)), by = ((i * 61) % (area.H * TS)); const x = ox + bx + Math.sin(t * 0.7) * 10, y = oy + by + Math.cos(t * 0.5) * 8 - 10 - Math.abs(Math.sin(t * 3)) * 3; if (x < -8 || y < -8 || x > BW + 8 || y > BH + 8) continue; g.drawImage(SPR.butterfly[(i % 2) * 2 + (Math.floor(t * 10) % 2)], Math.round(x), Math.round(y)); }
   }
   // flat things first
-  for (const p of props) if (p.flat) g.drawImage(p.spr.canvas, ox + Math.round(p.x - p.spr.ax), oy + Math.round(p.y - p.spr.ay));
+  for (const p of props) if (p.flat) { const s = p.kind === 'puddle' ? SPR.puddle[Math.floor(time * 3) % 3] : p.spr; if (s) g.drawImage(s.canvas, ox + Math.round(p.x - s.ax), oy + Math.round(p.y - s.ay)); }
   for (const e of enemies) if (e.state === 'mark' && e.mark) { const m = SPR.markerBig; g.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(time * 20)); g.drawImage(m.canvas, ox + m.ax * 0 + Math.round(e.mark.x - m.ax), oy + Math.round(e.mark.y - m.ay)); g.globalAlpha = 1; }
   for (const r of rocks) if (!r.done) { const m = SPR.marker; g.globalAlpha = 0.4 + 0.6 * (r.t / r.mark); g.drawImage(m.canvas, ox + Math.round(r.x - m.ax), oy + Math.round(r.y - m.ay)); g.globalAlpha = 1; }
   // y-sorted
   const objs = [];
-  for (const p of props) { if (p.flat) continue; if (p.y + oy < -40 || p.y + oy > BH + 60 || p.x + ox < -50 || p.x + ox > BW + 50) continue; objs.push({ y: p.y, x: p.x, draw: () => { if (p.kind === 'brazier') { const s = SPR.brazier[Math.floor(time * 8) % 3]; g.drawImage(s.canvas, ox + Math.round(p.x - s.ax), oy + Math.round(p.y - s.ay)); } else if (p.kind === 'house') { const s = p.spr; g.drawImage(s.canvas, ox + Math.round(p.x - s.ox), oy + Math.round(p.y - s.oy)); } else { if (p.big) g.drawImage(SPR.shadowBig, ox + Math.round(p.x) - 12, oy + Math.round(p.y) - 4); g.drawImage(p.spr.canvas, ox + Math.round(p.x - p.spr.ax), oy + Math.round(p.y - p.spr.ay)); } } }); }
+  for (const p of props) { if (p.flat) continue; if (p.y + oy < -40 || p.y + oy > BH + 60 || p.x + ox < -50 || p.x + ox > BW + 50) continue; objs.push({ y: p.y, x: p.x, draw: () => { if (p.kind === 'brazier') { const s = SPR.brazier[Math.floor(time * 8) % 3]; g.drawImage(s.canvas, ox + Math.round(p.x - s.ax), oy + Math.round(p.y - s.ay)); } else if (p.kind === 'house') { if (TSET.ready) { const s = SPR.houseTile; g.drawImage(s.canvas, ox + Math.round(p.x + p.house.w * TS / 2 - s.ax), oy + Math.round(p.y - s.ay)); } else { const s = p.spr; g.drawImage(s.canvas, ox + Math.round(p.x - s.ox), oy + Math.round(p.y - s.oy)); } } else { if (p.big) g.drawImage(SPR.shadowBig, ox + Math.round(p.x) - 12, oy + Math.round(p.y) - 4); g.drawImage(p.spr.canvas, ox + Math.round(p.x - p.spr.ax), oy + Math.round(p.y - p.spr.ay)); } } }); }
   for (const c of chests) objs.push({ y: c.y * TS + 15, x: c.x * TS + 8, draw: () => { const s = SPR.chest[c.open ? 1 : 0]; g.drawImage(s.canvas, ox + c.x * TS + 8 - s.ax, oy + c.y * TS + 15 - s.ay); } });
-  for (const n of npcs) objs.push({ y: n.y, x: n.x, draw: () => { const set = n.frames[n.facing]; const fr = n.moving ? set[[0, 1, 0, 2][Math.floor(n.walk * 2) % 4]] : set[0]; g.drawImage(SPR.shadow, ox + Math.round(n.x) - 7, oy + Math.round(n.y) - 3); g.drawImage(fr.canvas, ox + Math.round(n.x - fr.ax), oy + Math.round(n.y - fr.ay) + 1); if (state === 'play' && dist(n.x, n.y, P.x, P.y) < 22) g.drawImage(SPR.bubble, ox + Math.round(n.x) - 4, oy + Math.round(n.y) - 40 + Math.round(Math.sin(time * 4))); } });
+  for (const n of npcs) objs.push({ y: n.y, x: n.x, draw: () => { const set = n.frames[n.facing]; const fr = n.moving ? set[Math.floor(n.walk * 2) % 4] : set[0]; g.drawImage(SPR.shadow, ox + Math.round(n.x) - 7, oy + Math.round(n.y) - 3); g.drawImage(fr.canvas, ox + Math.round(n.x - fr.ax), oy + Math.round(n.y - fr.ay) + 1); if (state === 'play' && dist(n.x, n.y, P.x, P.y) < 22) g.drawImage(SPR.bubble, ox + Math.round(n.x) - 4, oy + Math.round(n.y) - 40 + Math.round(Math.sin(time * 4))); } });
   for (const e of enemies) if (rid === null ? dist(e.x, e.y, P.x, P.y) < 300 : e.room === rid) objs.push({ y: e.y + (e.state === 'under' ? -1000 : 0), x: e.x, draw: () => drawEnemy(e, ox, oy) });
   objs.push({ y: P.y, x: P.x, draw: () => drawHero(ox, oy) });
   for (const p of pickups) objs.push({ y: p.y, x: p.x, draw: () => { const bob = Math.round(Math.sin(time * 5 + p.x) * 1.5); let s; if (p.kind === 'coin') s = SPR.coin[Math.floor(time * 8 + p.x) % 4]; else if (p.kind === 'heart') s = SPR.heart[Math.floor(time * 4) % 2]; else if (p.kind === 'charm') s = SPR.charm[p.id]; else if (p.kind === 'keeping') s = SPR.heart[1]; if (!s) return; g.drawImage(SPR.shadow, ox + Math.round(p.x) - 7, oy + Math.round(p.y) - 1); if (p.kind === 'keeping') { g.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(time * 6)); g.drawImage(CH.silhouette(s, '#fff'), ox + Math.round(p.x) - 6, oy + Math.round(p.y) - 12 + bob - 1); g.globalAlpha = 1; g.drawImage(s, ox + Math.round(p.x) - 6, oy + Math.round(p.y) - 12 + bob, 12, 12); } else g.drawImage(s, ox + Math.round(p.x - s.width / 2), oy + Math.round(p.y - s.height - 2 + bob)); } });
@@ -1091,6 +1148,11 @@ function tick(now) { lastTick = now; const dt = Math.max(0, Math.min(1 / 30, (no
 function frame(now) { rafQueued = false; tick(now); if (!rafQueued) { rafQueued = true; requestAnimationFrame(frame); } }
 
 bakeAll();
+loadTileset(() => {
+  SPR.trees = [0, 1, 2, 3, 4, 5].map(() => OVER.tree()); SPR.bush = [0, 1, 2].map(() => OVER.bush()); SPR.stump = [0, 1].map(() => OVER.stump());
+  SPR.rockWood = OVER.rock(); SPR.rockCave = CAVE.boulder(); SPR.fenceTile = OVER.fence(); SPR.houseTile = OVER.house(); SPR.mouthTile = OVER.mouth();
+  for (const p of props) { if (p.kind === 'tree') p.spr = SPR.trees[0]; else if (p.kind === 'bush') p.spr = SPR.bush[0]; else if (p.kind === 'stump') p.spr = SPR.stump[0]; else if (p.kind === 'fence') p.spr = SPR.fenceTile; else if (p.kind === 'rock') p.spr = area && area.def.kind === 'holloway' ? SPR.rockCave : SPR.rockWood; }
+});
 if (loadSave()) applySettings();
 rafQueued = true; requestAnimationFrame(frame);
 setInterval(() => { if (performance.now() - lastTick > 250) tick(performance.now()); }, 125);

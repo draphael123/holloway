@@ -200,3 +200,24 @@ export function bakeCulvert(open) { // a stone arch in the stream bank with an i
   rect(g, 0, 8, 34, 1, D.rock.faceL); rect(g, 0, 0, 34, 2, '#3d7a30'); rect(g, 0, 2, 34, 1, '#2f5a27');
   return { canvas: c, ax: 17, ay: 26 };
 }
+
+// ---- dressing ----
+export function bakeMoss(earthTile, seed) { const rnd = mulberry(seed); const [c, g] = canvas(TS, TS); g.drawImage(earthTile, 0, 0); for (let i = 0; i < 26; i++) { const x = Math.floor(rnd() * 16), y = Math.floor(rnd() * 16); px(g, x, y, rnd() < 0.3 ? '#4a7a3a' : '#3a6a34'); if (rnd() < 0.4) px(g, x + 1, y, '#5a8a44'); } return c; }
+export function bakeMushrooms(seed) { const rnd = mulberry(seed); const [c, g] = canvas(14, 10); const cols = [['#c9452e', '#f4a07a'], ['#e0bb65', '#fff2b0'], ['#8a6a9a', '#c9a8d8']]; const n = 2 + Math.floor(rnd() * 2); for (let i = 0; i < n; i++) { const x = 2 + i * 4 + Math.floor(rnd() * 2), y = 7 - Math.floor(rnd() * 3); const [cap, lite] = cols[Math.floor(rnd() * 3)]; rect(g, x, y, 2, 3, '#e6dcc4'); ellipse(g, x + 1, y - 1, 3, 2, cap); px(g, x, y - 2, lite); } outline(c, '#241826'); return { canvas: c, ax: 7, ay: 10 }; }
+export function bakeRoots(seed) { const rnd = mulberry(seed); const [c, g] = canvas(20, 8); for (let i = 0; i < 3; i++) { const y = 2 + i * 2; line(g, Math.floor(rnd() * 6), y + Math.floor(rnd() * 2), 12 + Math.floor(rnd() * 8), y + 1, i & 1 ? '#5a3a22' : '#7a5230', 1); } return { canvas: c, ax: 10, ay: 6 }; }
+export function bakePuddle(frame) { const [c, g] = canvas(18, 10); ellipse(g, 9, 5, 8, 4, '#2a4a6a'); ellipse(g, 8, 4, 6, 2.5, '#3a6a9a'); px(g, 5 + frame, 3, '#d6ecf8'); px(g, 11 - frame, 6, '#5d9be0'); return { canvas: c, ax: 9, ay: 7 }; }
+export function bakeTallGrass(seed) { const rnd = mulberry(seed); const [c, g] = canvas(14, 12); for (let i = 0; i < 6; i++) { const x = 1 + i * 2 + Math.floor(rnd() * 2), h = 5 + Math.floor(rnd() * 6); line(g, x, 11, x + (i & 1 ? 1 : -1), 11 - h, i % 3 === 0 ? '#6cbd55' : '#4a9a3d', 1); px(g, x + (i & 1 ? 1 : -1), 11 - h, '#8ad46a'); } return { canvas: c, ax: 7, ay: 11 }; }
+export function bakeStump(seed) { const rnd = mulberry(seed); const [c, g] = canvas(16, 14); ellipse(g, 8, 10, 6, 3, '#4f3320'); rect(g, 2, 5, 12, 5, '#7a5230'); rect(g, 2, 5, 1, 5, '#a6733f'); ellipse(g, 8, 5, 6, 3, '#c9a56a'); ellipse(g, 8, 5, 4, 2, '#e0bb65'); ellipse(g, 8, 5, 2, 1, '#c9a56a'); px(g, 12, 8, '#4f3320'); if (rnd() < 0.5) px(g, 3 + Math.floor(rnd() * 3), 4, '#5a9a3a'); outline(c, '#241826'); return { canvas: c, ax: 8, ay: 12 }; }
+export function bakeStalagmite(seed) { const rnd = mulberry(seed); const [c, g] = canvas(14, 22); const h = 14 + Math.floor(rnd() * 6); const R = D.rock; for (let y = 0; y < h; y++) { const w = Math.max(1, Math.round((y / h) * 5)); rect(g, 7 - w, 20 - h + y, w * 2, 1, y % 4 === 0 ? R.faceL : R.face); px(g, 7 - w, 20 - h + y, R.faceL); px(g, 6 + w, 20 - h + y, R.faceD); } ellipse(g, 7, 20, 6, 2, R.faceD); outline(c, '#241826'); return { canvas: c, ax: 7, ay: 20 }; }
+// a cliff: the top is a rock ledge with grass growing to its edge; the face is layered stone, shown where the ground below is open
+export function bakeCliffTop(seed) { const rnd = mulberry(seed); const [c, g] = canvas(TS, TS); for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) { const r = rnd(); px(g, x, y, r < 0.08 ? '#66b34c' : r < 0.16 ? '#3d8030' : '#4f9c3c'); } for (let i = 0; i < 3; i++) { const x = Math.floor(rnd() * 12), y = Math.floor(rnd() * 12); rect(g, x, y, 3, 2, '#9a958a'); px(g, x, y, '#b9b4a8'); } return c; }
+export function bakeCliffFace(seed) { // irregular courses of stone under a lip of grass, the way a cut bank looks
+  const rnd = mulberry(seed); const [c, g] = canvas(TS, TS); const R = { lite: '#b9a88a', base: '#8a7a5a', mid: '#7a6a4c', dark: '#5a4a34', deep: '#3a2e20' };
+  for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) px(g, x, y, R.dark);
+  let y = 3;
+  while (y < TS - 1) { const h = 3 + Math.floor(rnd() * 2); let x = -Math.floor(rnd() * 3); while (x < TS) { const w = 3 + Math.floor(rnd() * 4); const tone = rnd() < 0.25 ? R.mid : R.base; rect(g, x, y, w, h, tone); rect(g, x, y, w, 1, R.lite); px(g, x, y, R.lite); rect(g, x + w - 1, y + 1, 1, h - 1, R.deep); if (rnd() < 0.3) px(g, x + 1 + Math.floor(rnd() * Math.max(1, w - 2)), y + 1 + Math.floor(rnd() * (h - 1)), R.deep); x += w + 1; } y += h + 1; }
+  rect(g, 0, 0, TS, 2, '#3d8030'); for (let x = 0; x < TS; x += 2) px(g, x + Math.floor(rnd() * 2), 2, rnd() < 0.5 ? '#4f9c3c' : '#3d8030'); px(g, Math.floor(rnd() * 16), 3, '#4f9c3c');
+  rect(g, 0, TS - 1, TS, 1, R.deep);
+  return c;
+}
+export function bakeFenceTile() { const [c, g] = canvas(TS, 18); rect(g, 0, 8, TS, 2, D.woodL); rect(g, 0, 13, TS, 2, D.woodL); rect(g, 6, 4, 4, 13, D.wood); rect(g, 6, 4, 1, 13, D.woodL); rect(g, 6, 3, 4, 1, D.woodL); outline(c, '#241826'); return { canvas: c, ax: 8, ay: 17 }; }

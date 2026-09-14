@@ -10,12 +10,20 @@
 //   ~  deep water (swim with THE LUNGS)   V  the culvert (the mere's mouth, on the stream bank)
 //   i  bramble imp   t  rat   a  thornshot   w  warren warden   M  the Digger   B  the Old Brock
 //   n  mere newt     d  the drowned   E  the Eelwife   Q  the Old Pike
+//   DRESSING  f flowers   y moss   F fence   C cliff   u stump   j bush   g stalagmite   k crate   L lamp
+//             m mushrooms  x roots   p puddle   l tall grass   (flat decoration, walkable)
+//   Rooms and the wood are also dressed AUTOMATICALLY at parse time to a density target (see dress()).
+
+import { mulberry } from './px.js';
 
 export const TS = 16;
 export const CELL_W = 20, CELL_H = 11;
 
-export const K = { WALL: 1, FLOOR: 2, SOFT: 3, MOUND: 4, PIT: 5, GRASS: 6, DIRT: 7, TREE: 8, WATER: 9, PLANK: 10, HOUSE: 11, ROCK: 12, BRAZIER: 13, MOUTH: 14, STAIRS: 15, DEEP: 16, CULVERT: 17 };
-export const SOLID = new Set([K.WALL, K.SOFT, K.MOUND, K.TREE, K.WATER, K.HOUSE, K.ROCK, K.BRAZIER, K.DEEP]);
+export const K = { WALL: 1, FLOOR: 2, SOFT: 3, MOUND: 4, PIT: 5, GRASS: 6, DIRT: 7, TREE: 8, WATER: 9, PLANK: 10, HOUSE: 11, ROCK: 12, BRAZIER: 13, MOUTH: 14, STAIRS: 15, DEEP: 16, CULVERT: 17,
+  FLOWERS: 18, MOSS: 19, FENCE: 20, CLIFF: 21, STUMP: 22, BUSH: 23, STAL: 24, CRATE: 25, LAMP: 26 };
+export const SOLID = new Set([K.WALL, K.SOFT, K.MOUND, K.TREE, K.WATER, K.HOUSE, K.ROCK, K.BRAZIER, K.DEEP, K.FENCE, K.CLIFF, K.STUMP, K.BUSH, K.STAL, K.CRATE, K.LAMP]);
+// what the ground is under a prop, for drawing
+export const GRASSY = new Set([K.GRASS, K.FLOWERS, K.TREE, K.HOUSE, K.ROCK, K.MOUTH, K.FENCE, K.CLIFF, K.STUMP, K.BUSH, K.LAMP]);
 export const SWIMMABLE = new Set([K.DEEP]);
 export const DIGGABLE = new Set([K.SOFT, K.MOUND]);
 
@@ -282,8 +290,8 @@ export const AREAS = {
     id: 'wood', name: 'THE WOOD\'S EDGE', kind: 'wood', music: 'wood',
     rows: [
       'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
-      'TTTTTTTTTTTTTTTTTTTTDDTTTTTTTTTTTTTTTTTT',
-      'TTTT,,,,,,,,,,,,,,,,::,,,,,,,,,,,,,,,TTT',
+      'TCCCCCCCCCCCCCCCCCCCDDCCCCCCCCCCCCCCCCCT',
+      'TTCCCCCCCCCCCCCCCCCC::CCCCCCCCCCCCCCCCCT',
       'TTT,,,,,,,T,,,,,,,,,::,,,,,,T,,,,,,,,TTT',
       'TT,,,,i,,,,,,,,,,,,,::,,,,,,,,,,i,,,,,TT',
       'TT,,,,,,,,,,r,,,,,,,::,,,,,,,,,,,,,,T,TT',
@@ -296,9 +304,9 @@ export const AREAS = {
       'TT,,,,,,,,,,,,,,,,,,::,,,,,,,,,,,,,,,,TT',
       'TT,,,,,,,,,,,,,,,,,,::,,,,,,,,,,,,,,,,TT',
       'TT,,,,,T,,,,,,,,,,,,::,,,,,HHHH,,,,,,,TT',
-      'TT,,,,,,,,,,,,,,,,,,::,,,,,HHHH,,,,,,,TT',
+      'TT,,,,,,,,,,,,,,,,,,::,,,,,HHHH,,FFF,,TT',
       'TT,,,,,,,,,,,,,,,,,,::,,,,,HHHH,,T,,,,TT',
-      'TT,,,,,,,,,,,1,,,,,,::::::::2,,,,,,,,,TT',
+      'TT,,,,,,,,,,,1,,,,,,::::::::2,fL,,,,,,TT',
       'TT,,,,,,,,,,,,,,,,,,::,,,,,,,,,,,,,,,,TT',
       'TT,,,T,,,,,,,,,,,S,,::,,,,,,,,,,,,,,,,TT',
       'TT,,,,,,,,,,,,,,,,,,@:,,,3,,,,T,,,,,,,TT',
@@ -363,7 +371,9 @@ export function areaRows(a) {
   return rows;
 }
 
-const TILE_CH = { '#': K.WALL, '.': K.FLOOR, '%': K.SOFT, '*': K.MOUND, 'O': K.PIT, ',': K.GRASS, ':': K.DIRT, 'T': K.TREE, 'W': K.WATER, '=': K.PLANK, 'H': K.HOUSE, 'r': K.ROCK, 'b': K.BRAZIER, 'D': K.MOUTH, 'K': K.FLOOR, '^': K.FLOOR, '~': K.DEEP, 'V': K.CULVERT };
+const TILE_CH = { '#': K.WALL, '.': K.FLOOR, '%': K.SOFT, '*': K.MOUND, 'O': K.PIT, ',': K.GRASS, ':': K.DIRT, 'T': K.TREE, 'W': K.WATER, '=': K.PLANK, 'H': K.HOUSE, 'r': K.ROCK, 'b': K.BRAZIER, 'D': K.MOUTH, 'K': K.FLOOR, '^': K.FLOOR, '~': K.DEEP, 'V': K.CULVERT,
+  'f': K.FLOWERS, 'y': K.MOSS, 'F': K.FENCE, 'C': K.CLIFF, 'u': K.STUMP, 'j': K.BUSH, 'g': K.STAL, 'k': K.CRATE, 'L': K.LAMP };
+const DECO_CH = { m: 'mushroom', x: 'roots', p: 'puddle', l: 'tallgrass' };
 
 export function parseArea(a) {
   const rows = areaRows(a);
@@ -393,6 +403,7 @@ export function parseArea(a) {
     else if (ch === '!') ents.push({ kind: 'dripspot', x, y, room: rid });
     else if (ch === 'D') ents.push({ kind: 'mouth', x, y, room: rid });
     else if (ch === 'V') ents.push({ kind: 'culvert', x, y, room: rid });
+    else if (DECO_CH[ch]) ents.push({ kind: 'deco', sub: DECO_CH[ch], x, y, room: rid });
     else if (/[1-9]/.test(ch)) { const def = (a.npcs || []).find(n => n.idx === +ch); if (def) ents.push({ kind: 'npc', x, y, room: rid, def }); }
   }
   // the chest tile is a rock for collision purposes; mark it back to floor so the sprite is drawn on earth
@@ -403,7 +414,45 @@ export function parseArea(a) {
       rooms.push({ id, name: a.rooms[id].name, gx, gy, x: gx * CELL_W, y: gy * CELL_H, w: CELL_W, h: CELL_H });
     }
   }
-  return { id: a.id, def: a, W, H: Hh, tiles, ents, rooms };
+  const out = { id: a.id, def: a, W, H: Hh, tiles, ents, rooms };
+  dress(out); return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// DRESS — every screen gets furniture to a measured density, deterministically, without ever blocking a route:
+// flat decoration anywhere on open ground away from doors; solid props only where all four neighbours are open
+// and nothing authored is within a tile. Targets are per 100 walkable tiles (tools/quality.mjs prints the result).
+// ---------------------------------------------------------------------------------------------
+function dress(area) {
+  const a = area.def; const rnd = mulberry(a.id.length * 131 + 7);
+  const t = (x, y) => (x < 0 || y < 0 || x >= area.W || y >= area.H) ? K.WALL : area.tiles[y * area.W + x];
+  const holl = a.kind === 'holloway';
+  const taken = new Set(); for (const e of area.ents) { taken.add(e.x + ',' + e.y); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) taken.add((e.x + dx) + ',' + (e.y + dy)); }
+  const isDoorish = (x, y) => { if (!holl) return false; const lx = x % CELL_W, ly = y % CELL_H; return lx <= 1 || lx >= CELL_W - 2 || ly <= 1 || ly >= CELL_H - 2; };
+  const open = (x, y) => { const k = t(x, y); return holl ? k === K.FLOOR : (k === K.GRASS || k === K.FLOWERS); };
+  const regions = holl ? area.rooms.map(r => ({ x0: r.x + 1, y0: r.y + 1, x1: r.x + r.w - 1, y1: r.y + r.h - 1, id: r.id })) : [{ x0: 2, y0: 2, x1: area.W - 2, y1: area.H - 2, id: 'wood' }];
+  for (const R of regions) {
+    let walk = 0, have = 0; for (let y = R.y0; y < R.y1; y++) for (let x = R.x0; x < R.x1; x++) { const k = t(x, y); if (!SOLID.has(k) && k !== K.PIT) walk++; }
+    for (const e of area.ents) if (e.kind !== 'enemy' && e.kind !== 'start' && e.kind !== 'dripspot' && e.x >= R.x0 && e.x < R.x1 && e.y >= R.y0 && e.y < R.y1) have++;
+    const want = Math.max(0, Math.round(walk * (holl ? 0.07 : 0.09)) - have);
+    let placed = 0, tries = 0;
+    while (placed < want && tries++ < 4000) {
+      const x = R.x0 + Math.floor(rnd() * (R.x1 - R.x0)), y = R.y0 + Math.floor(rnd() * (R.y1 - R.y0)); const key = x + ',' + y;
+      if (!open(x, y) || taken.has(key) || isDoorish(x, y)) continue;
+      const solidOk = !holl || placed % 3 === 2; // in a room every third piece may be solid; the wood is looser
+      const r = rnd();
+      if (holl) {
+        if (solidOk && r < 0.25 && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => open(x + dx, y + dy) && !taken.has((x + dx) + ',' + (y + dy)))) area.tiles[y * area.W + x] = r < 0.15 ? K.STAL : K.CRATE;
+        else if (r < 0.5) area.tiles[y * area.W + x] = K.MOSS;
+        else area.ents.push({ kind: 'deco', sub: r < 0.75 ? 'mushroom' : r < 0.9 ? 'roots' : 'puddle', x, y, room: R.id });
+      } else {
+        if (r < 0.22 && [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => open(x + dx, y + dy) && !taken.has((x + dx) + ',' + (y + dy)))) area.tiles[y * area.W + x] = r < 0.16 ? K.BUSH : K.STUMP;
+        else if (r < 0.55) area.tiles[y * area.W + x] = K.FLOWERS;
+        else area.ents.push({ kind: 'deco', sub: r < 0.85 ? 'tallgrass' : 'mushroom', x, y, room: null });
+      }
+      taken.add(key); placed++;
+    }
+  }
 }
 
 // door cells of a room: positions on its wall ring that are not wall

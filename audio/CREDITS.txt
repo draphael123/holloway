@@ -12,3 +12,6 @@ SOUND EFFECTS (audio/sfx) — all CC0 1.0 (public domain dedication); credit giv
   goblin1-2: "Goblins Sound Pack" by artisticdude — https://opengameart.org/content/goblins-sound-pack
   roar: "CC0 Deep Monster Roar" by trazzz123 — https://opengameart.org/content/cc0-deep-monster-roar (trimmed to 3.5 s)
   die: "Deep Bone Crack/Break SFX" by Zane Little Music — https://opengameart.org/content/deep-bone-crackbreak-sfx
+
+TILESET (tiles/overworld.png, tiles/cave.png, tiles/objects.png)
+  "Zelda-like tilesets and sprites" by ArMM1998 — https://opengameart.org/content/zelda-like-tilesets-and-sprites — CC0 (public domain); credit given as a courtesy.

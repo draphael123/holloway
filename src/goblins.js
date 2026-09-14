@@ -67,7 +67,7 @@ export function bakeGoblin(v) {
       if (v.weapon === 'shield' && f !== 'up') { if (f === 'side') drawShield(g, ox + 15 + (fr === 3 ? 2 : 0), base - 11, fr); else drawShield(g, ox + 3, base - 10, fr); const kx = f === 'side' ? ox + 2 : ox + 13, ky = fr === 2 ? base - 24 : fr === 3 ? base - 8 : base - 17; line(g, kx, ky + 6, kx + (fr === 3 ? 3 : 1), ky, WOOD, 2); circle(g, kx + (fr === 3 ? 3 : 1), ky, 2.2, shade(WOOD, -0.3)); }
       if (v.weapon === 'spear' && f !== 'up') { const ext = fr === 3 ? 6 : fr === 2 ? -3 : 0; if (f === 'side') { line(g, hx - 6, hy + 2, hx + 8 + ext, hy - 2, REED, 1); px(g, hx + 9 + ext, hy - 2, STEEL); px(g, hx + 9 + ext, hy - 3, STEEL_D); } else { line(g, hx, hy - 8, hx + 1, hy + 8 + ext, REED, 1); px(g, hx + 1, hy + 9 + ext, STEEL); } }
       if (v.weapon === 'grab' && fr >= 2 && f !== 'up') { const reach = fr === 3 ? 6 : 2; if (f === 'side') rect(g, ox + 12, hy - 1, reach + 3, 3, v.skin); else { rect(g, ox + 1 - (fr === 3 ? 1 : 0), hy + reach, 4, 3, v.skin); rect(g, ox + 11 + (fr === 3 ? 1 : 0), hy + reach, 4, 3, v.skin); } }
-      outline(c, '#1b1626');
+      outline(c, shade(v.skin, -0.72)); // a dark tint of its own skin, not black: it sits in the scene
       return { canvas: c, ax: cx, ay: base };
     });
   }
