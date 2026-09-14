@@ -110,8 +110,9 @@ export async function runBot(HW, opts = {}) {
         if (HW.state === 'won') break;
         const allowDig = !!P.abilities.claw;
         if (HW.room.id !== leg.room) { const r = await goRoom(leg.room, allowDig); if (r !== 'ok') { report.notes.push(`route ${leg.room}: ${r}`); if (r.startsWith('stuck') || r === 'noroute' || r.startsWith('blocked')) { const t = HW.area.rooms.find(x => x.id === leg.room); HW.tp(t.x * TS + 10 * TS, t.y * TS + 6 * TS); report.notes.push(`teleported into ${leg.room}`); } } }
+        if (HW.room.id !== leg.room) { const r = await goRoom(leg.room, allowDig); if (r !== 'ok') { const t = HW.area.rooms.find(x => x.id === leg.room); HW.tp(t.x * TS + 10 * TS, t.y * TS + 6 * TS); report.notes.push(`teleported into ${leg.room} (${r})`); } }
         if (leg.do === 'clear') { const f = await fight(); if (f !== 'ok') report.notes.push(`${leg.room} fight: ${f}`); }
-        else if (leg.do === 'chest') { const c = HW.area.ents.find(e => e.kind === 'chest' && e.room === leg.room); if (c) { await walkTo(c.x, c.y + 1, { stopAt: 4 }); holdDir(0, -1); step(2); stop(); await tap('Space'); step(10); report.notes.push(`chest ${leg.room}: keys=${P.keys}`); } }
+        else if (leg.do === 'chest') { const c = HW.area.ents.find(e => e.kind === 'chest' && e.room === leg.room); if (c) { for (let k = 0; k < 3 && !HW.PROG.opened[c.key]; k++) { await walkTo(c.x, c.y + 1, { stopAt: 3 }); holdDir(0, -1); step(3); stop(); step(2); await tap('Space'); step(10); } report.notes.push(`chest ${leg.room}: keys=${P.keys} opened=${!!HW.PROG.opened[c.key]}`); } }
         else if (leg.do === 'dig') { const r = HW.room; const plug = r.doors.find(d => d.side === leg.at); if (plug) { const res = await walkTo(plug.x, plug.y, { allowDig: true, maxFrames: 1500, stopAt: 3 }); report.notes.push(`dig ${leg.room}: ${res} claw=${P.abilities.claw}`); } }
         else if (leg.do === 'stairs') { const s = HW.area.ents.find(e => e.kind === 'stairs'); const res = await walkTo(s.x, s.y, { stopAt: 2 }); step(10); report.notes.push(`stairs: ${res} state=${HW.state}`); }
         if (blank()) report.blankFrames++;
