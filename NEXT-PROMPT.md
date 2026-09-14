@@ -6,6 +6,12 @@
   without being told.
 - The pedlar's prices. The bottled heart at 60 and mothsilk at 45 are guesses.
 
+## Done from the first playtest
+- Roll: 58 px, 32 stamina (was 100 / 22). Say if it still feels long.
+- Chrono Trigger read: hero and NPC sprites redrawn with shaded hair, three-tone cloth and a stride; grass tufts; wall shadows.
+- Enemies are goblins: cutter, whelp, slinger (stones), shieldbearer, bog goblin, drowned goblin. Bosses stay beasts.
+- Combat sounds are recorded CC0 samples (audio/sfx), synth as fallback.
+
 ## Known and open (round 2)
 - The bot beats the warren; in the mere it reaches the pike but does not kill it inside its budget (it never
   wades in after it, so it waits for surges and snaps). A person will not have that problem, but the pike's
