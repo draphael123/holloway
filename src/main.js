@@ -93,7 +93,10 @@ const ENEMIES = {
   warden: { name: 'GOBLIN SHIELDBEARER', hp: 44, spd: 34, r: 8, xp: 14, gold: [3, 6], dmg: 9, aggro: 100, mat: 'flesh',
     blurb: 'The tribe\'s doorkeeper, behind a round shield. The shield turns a sword. It does not turn THE HEAVY BLOW.', tells: ['SHOVE'],
     drops: [{ item: 'heart', rate: 0.15 }, { item: 'charm:brockhide', rate: 0.04 }] },
-  digger: { name: 'THE DIGGER', hp: 170, spd: 44, r: 12, xp: 60, gold: [12, 20], dmg: 12, aggro: 400, mat: 'flesh', big: true, mini: true,
+  burrower: { name: 'THE GOBLIN BURROWER', hp: 170, spd: 46, r: 12, xp: 60, gold: [12, 20], dmg: 12, aggro: 400, mat: 'flesh', big: true, mini: true, ai: 'digger',
+    blurb: 'The tribe\'s digger, in iron claw-gauntlets it took from somewhere older. It goes under and comes up where you stand: watch the ring in the dirt. Its gauntlets are the way to the shaman.', tells: ['BURROW', 'SWIPE', 'THROW'],
+    drops: [{ item: 'claw', rate: 1 }] },
+  digger: { name: 'THE DIGGER', hidden: true, hp: 170, spd: 44, r: 12, xp: 60, gold: [12, 20], dmg: 12, aggro: 400, mat: 'flesh', big: true, mini: true,
     blurb: 'The mole reeve of the warren. It goes under and comes up where you stand: watch the ring in the dirt. Its claws are the way to the Brock.', tells: ['BURROW', 'SWIPE', 'THROW'],
     drops: [{ item: 'claw', rate: 1 }] },
   shaman: { name: 'THE GOBLIN SHAMAN', hp: 380, spd: 44, r: 12, xp: 200, gold: [30, 50], dmg: 12, aggro: 400, mat: 'flesh', big: true, boss: true, ai: 'shaman', spawn: 'rat',
@@ -153,7 +156,7 @@ const wearing = id => P.equipped.includes(id);
 const SPR = {};
 function bakeAll() {
   SPR.hero = CH.bakeHero(); SPR.swords = CH.bakeSwords(); SPR.shield = CH.bakeShield(); SPR.claw = CH.bakeClawHand();
-  SPR.creature = { imp: GB.bakeGoblin(GB.CUTTER), rat: GB.bakeGoblin(GB.WHELP), archer: GB.bakeGoblin(GB.SLINGER), warden: GB.bakeGoblin(GB.SHIELDBEARER), digger: CH.bakeDigger(), brock: CH.bakeBrock(), shaman: GB.bakeGoblin(GB.SHAMAN), newt: GB.bakeGoblin(GB.BOG), drowned: GB.bakeGoblin(GB.DROWNED), eelwife: CH.bakeEelwife(), pike: CH.bakePike() };
+  SPR.creature = { imp: GB.bakeGoblin(GB.CUTTER), rat: GB.bakeGoblin(GB.WHELP), archer: GB.bakeGoblin(GB.SLINGER), warden: GB.bakeGoblin(GB.SHIELDBEARER), digger: CH.bakeDigger(), burrower: GB.bakeGoblin(GB.BURROWER), brock: CH.bakeBrock(), shaman: GB.bakeGoblin(GB.SHAMAN), newt: GB.bakeGoblin(GB.BOG), drowned: GB.bakeGoblin(GB.DROWNED), eelwife: CH.bakeEelwife(), pike: CH.bakePike() };
   SPR.ripple = [0, 1, 2].map(f => DA.bakeRipple(f)); SPR.spout = [0, 1, 2].map(f => DA.bakeSpout(f)); SPR.culvert = [DA.bakeCulvert(false), DA.bakeCulvert(true)];
   SPR.arrow = CH.bakeArrow(); SPR.clod = CH.bakeClod();
   SPR.earth = [0, 1, 2, 3].map(i => DA.bakeEarth(11 + i));

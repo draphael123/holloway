@@ -33,6 +33,7 @@ export const SLINGER = { skin: '#6a7a3a', rag: '#4a4a5a', weapon: 'sling', hood:
 export const SHIELDBEARER = { skin: '#4a7a3a', rag: '#3a3a44', weapon: 'shield' };
 export const BOG = { skin: '#3a7a6a', rag: '#2a4a3a', weapon: 'spear' };
 export const DROWNED = { skin: '#8aa0a8', rag: '#3a4a5a', weapon: 'grab', weed: true };
+export const BURROWER = { skin: '#6a7a3a', rag: '#5a3a22', weapon: 'claws', big: true };
 export const SHAMAN = { skin: '#4a8a5a', rag: '#5a2a6a', weapon: 'staff', hood: '#2a1a3a', big: true, feathers: true };
 
 const STEEL = '#d8dce6', STEEL_D = '#8a8e9a', WOOD = '#7a5230', WOOD_L = '#a6733f', REED = '#6a8a3a', BOSS = '#9a9aa8', STONE = '#8a8a90';
@@ -64,6 +65,7 @@ export function bakeGoblin(v) {
       // weapons in front
       const hx = f === 'side' ? ox + 13 : f === 'down' ? ox + 12 : ox + 3, hy = oy + 13;
       if (v.feathers) { for (let i = 0; i < 3; i++) line(g, ox + 5 + i * 3, oy + 1, ox + 4 + i * 3 - (i === 0 ? 2 : 0), oy - 5 - (i & 1) * 2, i === 1 ? '#c9452e' : '#e0bb65', 1); }
+      if (v.weapon === 'claws' && f !== 'up') { const ext = fr === 3 ? 4 : fr === 2 ? -2 : 0; for (const side of (f === 'side' ? [1] : [-1, 1])) { const cxh = f === 'side' ? hx + 1 : ox + 8 + side * 7, cyh = hy + 1; rect(g, cxh - 2, cyh - 1, 4, 3, '#3a2a2a'); for (let i = -1; i <= 1; i++) line(g, cxh, cyh + i, cxh + (f === 'side' ? 6 + ext : side * 2), cyh + (f === 'side' ? i * 2 : 6 + ext + i), STEEL, 1); } }
       if (v.weapon === 'staff' && f !== 'up') { const sx2 = f === 'side' ? hx + 2 : ox + 14; line(g, sx2, hy + 7, sx2, hy - 10, WOOD, 2); circle(g, sx2, hy - 12, 2.5, '#e6dcc4'); px(g, sx2 - 1, hy - 12, '#1b1626'); px(g, sx2 + 1, hy - 12, '#1b1626'); if (fr === 2 || fr === 3) { circle(g, sx2, hy - 16, fr === 3 ? 3 : 2, '#6af06a'); px(g, sx2, hy - 16, '#e6ffe6'); } }
       if (v.weapon === 'staff' && f === 'up') { line(g, ox + 2, hy + 7, ox + 2, hy - 10, WOOD, 2); circle(g, ox + 2, hy - 12, 2.5, '#e6dcc4'); }
       if (v.weapon === 'dagger' && f !== 'up') { const ext = fr === 3 ? 4 : fr === 2 ? -2 : 0; if (f === 'side') { line(g, hx, hy, hx + 5 + ext, hy - 1, STEEL, 2); px(g, hx + 5 + ext, hy - 2, STEEL); rect(g, hx - 1, hy - 1, 2, 3, WOOD); } else { line(g, hx, hy, hx + 2, hy + 5 + ext, STEEL, 2); rect(g, hx - 1, hy - 2, 3, 2, WOOD); } }

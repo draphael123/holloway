@@ -39,7 +39,7 @@
 
 ## Done from the last note before the pause
 - THE GOBLIN SHAMAN is the warren's boss (the Brock is retired, its kit lives on as the pike's). BOLT and BARRAGE can be turned; HEX and RING are UNBLOCKABLE, told in RED with a DASH prompt on the boss bar; BLINK when you get close; whelps at half health.
-- Waystones (blue standing stones) in the throat and the Digger's hall of each holloway: touch one to make it your checkpoint and heal. It glows while it is the active one.
+- Waystones (blue standing stones) in the throat and the Burrower's hall of each holloway: touch one to make it your checkpoint and heal. It glows while it is the active one.
 - Every room has a landmark (idols, totems, banners, a cage, skull piles) and most have their own tint.
 - Mini-map in the HUD corner (visited, cleared, current, boss/mini/waystone marks) and a MAP page in the pack with names and doors.
 

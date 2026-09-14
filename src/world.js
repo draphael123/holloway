@@ -8,7 +8,7 @@
 //   c  chest              S  sign / tablet      h  heart              K  locked door cell  ^  stairs (boss exit)
 //   @  start / entry      D  warren mouth       !  falling-rock / spout spot  1-9 NPC index
 //   ~  deep water (swim with THE LUNGS)   V  the culvert (the mere's mouth, on the stream bank)
-//   i  bramble imp   t  rat   a  thornshot   w  warren warden   M  the Digger   B  the Old Brock
+//   i  goblin cutter   t  whelp   a  slinger   w  shieldbearer   M  the Goblin Burrower   B  the Goblin Shaman
 //   n  mere newt     d  the drowned   E  the Eelwife   Q  the Old Pike
 //   DRESSING  f flowers   y moss   F fence   C cliff   u stump   j bush   g stalagmite   k crate   L lamp
 //             m mushrooms  x roots   p puddle   l tall grass   (flat decoration, walkable)
@@ -28,7 +28,7 @@ export const GRASSY = new Set([K.GRASS, K.FLOWERS, K.TREE, K.HOUSE, K.ROCK, K.MO
 export const SWIMMABLE = new Set([K.DEEP]);
 export const DIGGABLE = new Set([K.SOFT, K.MOUND]);
 
-const ENEMY_CH = { i: 'imp', t: 'rat', a: 'archer', w: 'warden', M: 'digger', B: 'shaman', n: 'newt', d: 'drowned', E: 'eelwife', Q: 'pike' };
+const ENEMY_CH = { i: 'imp', t: 'rat', a: 'archer', w: 'warden', M: 'burrower', B: 'shaman', n: 'newt', d: 'drowned', E: 'eelwife', Q: 'pike' };
 // Y = a WAYSTONE: touch it and it is where you come back to. Each room may carry `decor` (landmarks) and a `tint`.
 
 // ---------------------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ const WARREN_ROOMS = {
     '#..................#',
     '####################',
   ] },
-  D: { name: 'THE DIGGER\'S HALL', tint: 'rgba(50,35,10,0.2)', decor: [{ sub: 'totem', x: 16, y: 2 }], rows: [
+  D: { name: 'THE BURROWER\'S HALL', tint: 'rgba(50,35,10,0.2)', decor: [{ sub: 'totem', x: 16, y: 2 }], rows: [
     '####################',
     '#%%................#',
     '#%..........s......#',
@@ -339,7 +339,7 @@ export const AREAS = {
     rooms: WARREN_ROOMS, chests: WARREN_CHESTS, mounds: WARREN_MOUNDS, signs: WARREN_SIGNS,
     // the door out of H's south wall leads back to the wood, standing under the mouth
     exits: { 'H:s': { to: 'wood', at: 'mouth' } },
-    boss: 'shaman', mini: 'digger', keeping: 'THE SHAMAN\'S HEART', verb: 'dig', hazard: 'rock',
+    boss: 'shaman', mini: 'burrower', keeping: 'THE SHAMAN\'S HEART', verb: 'dig', hazard: 'rock',
     waves: { B: [['rat', 'rat', 'imp']], F: [['imp', 'imp']] },
     won: { title: 'THE WARREN IS DONE', lines: ['The Pell boy was in the shaman\'s hole, under a heap of what the tribe had kept: lanterns, a goat bell, a warden\'s cap.', 'He would not say what he saw. You carry him up the throat and out into the light.', 'You kept THE CLAW. You kept THE SHAMAN\'S HEART. That is the law.'] },
     // the intended route, for the bot and the audit's staged reachability

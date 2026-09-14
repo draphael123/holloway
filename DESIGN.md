@@ -8,7 +8,7 @@ do, they took from something in the wood.
 That sentence has to retro-justify the mechanics, or it is set dressing:
 
 - **Abilities come from named creatures.** Every holloway has a mid-dungeon named creature (rule A9) and
-  killing it gives you its verb — THE CLAW from the Digger, and so on. The verb is what opens the way to the
+  killing it gives you its verb — THE CLAW from the Goblin Burrower, and so on. The verb is what opens the way to the
   boss. Zelda's item chest, but the chest is a body.
 - **Stats come from the boss.** A holloway's boss leaves a KEEPING: a permanent piece of you (heart container).
 - **Loot is what the wood kept.** Chests, buried mounds and rare drops are the things the wood took from
@@ -59,12 +59,12 @@ Nine rooms, three by three. The intended route, and the optional ones:
 
 ```
 [ A the key nook ][ B the crowd  ][ C the pit gallery (charm) ]
-[ D the Digger   ][ E the hub    ][ F the archers' vein        ]
+[ D the Burrower ][ E the hub    ][ F the archers' vein        ]
 [ G the mounds   ][ H the throat ][ I THE GOBLIN SHAMAN        ]
 ```
 
 H (in from the wood, rocks fall at marked spots) → E → B (sealed crowd) → A (key, wardens) → E → D (locked;
-THE DIGGER; drops THE CLAW) → F (the plug into I is soft earth: dig it) → I (THE GOBLIN SHAMAN; KEEPING; the way
+THE GOBLIN BURROWER; drops THE CLAW) → F (the plug into I is soft earth: dig it) → I (THE GOBLIN SHAMAN; KEEPING; the way
 out). Optional: C (pits + archers, THORNBAND charm), G (soft earth, buried loot — needs the claw).
 
 ## Ports and process
