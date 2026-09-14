@@ -2,3 +2,12 @@ audio/theme.ogg — "SNES RPG Overworld" by Emma_MA, CC0 (public domain), https:
 Transcoded from the WAV to OGG Vorbis q5.
 audio/descent.ogg — "8-bit Cave Loop" by Wolfgang_, CC0 (public domain), https://opengameart.org/content/8-bit-cave-loop
 Transcoded from the WAV to OGG Vorbis q5.
+
+SOUND EFFECTS (audio/sfx) — all CC0 1.0 (public domain dedication); credit given as a courtesy.
+  swing1-3, heavy: "Swishes Sound Pack" by artisticdude — https://opengameart.org/content/swishes-sound-pack
+  hit_flesh1-2, hit_wood, guard: "Impact Sounds" by Kenney — https://kenney.nl/assets/impact-sounds
+  parry: "20 Sword Sound Effects (Attacks and Clashes)" by StarNinjas — https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes
+  hurt: "grunts of male death and pain" by thebardofblasphemy — https://opengameart.org/content/grunts-male-death-and-pain (excerpt)
+  goblin1-2: "Goblins Sound Pack" by artisticdude — https://opengameart.org/content/goblins-sound-pack
+  roar: "CC0 Deep Monster Roar" by trazzz123 — https://opengameart.org/content/cc0-deep-monster-roar (trimmed to 3.5 s)
+  die: "Deep Bone Crack/Break SFX" by Zane Little Music — https://opengameart.org/content/deep-bone-crackbreak-sfx
