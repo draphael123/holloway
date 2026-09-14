@@ -17,6 +17,12 @@ const angDiff = (a, b) => { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if
 const FACE_ANG = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
 const faceOf = (dx, dy) => Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
 const faceOfAng = a => faceOf(Math.cos(a), Math.sin(a));
+// on a diagonal keep the facing you already have while that key is still down; otherwise sideways wins (the CT rule)
+function pickFacing(mx, my, cur) {
+  if ((cur === 'left' && mx < 0) || (cur === 'right' && mx > 0) || (cur === 'up' && my < 0) || (cur === 'down' && my > 0)) return cur;
+  if (Math.abs(mx) >= Math.abs(my) && mx !== 0) return mx > 0 ? 'right' : 'left';
+  return my > 0 ? 'down' : my < 0 ? 'up' : cur;
+}
 
 // ---------------------------------------------------------------------------------------------
 // DISPLAY — DPR-correct integer scaling of a 320×180 buffer
@@ -304,7 +310,7 @@ function updateCamera(dt) {
   if (curRoom) {
     if (cam.slide > 0) { cam.slide = Math.max(0, cam.slide - dt); const k = 1 - cam.slide / 0.4; const e = k < 0.5 ? 2 * k * k : -1 + (4 - 2 * k) * k; cam.x = lerp(cam.fx, cam.tx, e); cam.y = lerp(cam.fy, cam.ty, e); if (cam.slide === 0) { cam.x = cam.tx; cam.y = cam.ty; if (state === 'slide') state = 'play'; } }
     else { cam.x = t.x; cam.y = t.y; }
-  } else { const k = 1 - Math.pow(0.02, dt); cam.x += (t.x - cam.x) * k; cam.y += (t.y - cam.y) * k; }
+  } else { cam.x = t.x; cam.y = t.y; } // hard-locked to the hero, as the SNES did it: no lag, no jitter between hero and ground
 }
 function enterRoom(r) {
   const prev = curRoom; curRoom = r;
@@ -385,9 +391,10 @@ function updatePlayer(dt) {
         if (spend(P.swim && wearing('eelskin') ? 6 : rollCost())) { P.roll = P.rollDur; const a = len ? Math.atan2(my, mx) : FACE_ANG[P.facing]; P.rdx = Math.cos(a); P.rdy = Math.sin(a); if (len) P.facing = faceOf(mx, my); P.guard = false; P.parryT = 0; sfx.roll(); puff(P.x, P.y, 5, '#c9b9a0', 30); }
       } else if (len) {
         const sp = 84 * speedMul() * (P.guard ? 0.5 : 1) * (P.swim ? (wearing('eelskin') ? 0.75 : 0.55) : 1);
-        moveBox(P, mx * sp * dt, my * sp * dt, P_HW, P_HH, 'player');
-        if (!P.guard || true) P.facing = faceOf(mx, my);
-        P.moving = true; P.walk += dt * (P.guard ? 2 : 4); P.stepT -= dt; if (P.stepT <= 0) { P.stepT = 0.26; if (P.swim) { sfx.roll(); puff(P.x - mx * 4, P.y - 2, 2, '#d6ecf8', 12); } else { sfx.step(); puff(P.x - mx * 4, P.y, 1, area.def.kind === 'holloway' ? '#8a6a3f' : '#a4c47a', 8); } }
+        const bx = P.x, by = P.y; moveBox(P, mx * sp * dt, my * sp * dt, P_HW, P_HH, 'player');
+        P.facing = pickFacing(mx, my, P.facing);
+        // the stride is measured in ground covered, not time, so the feet never slide
+        const moved = Math.hypot(P.x - bx, P.y - by); P.moving = true; P.walk += moved / 22; P.stepT -= dt; if (P.stepT <= 0) { P.stepT = 0.26; if (P.swim) { sfx.roll(); puff(P.x - mx * 4, P.y - 2, 2, '#d6ecf8', 12); } else { sfx.step(); puff(P.x - mx * 4, P.y, 1, area.def.kind === 'holloway' ? '#8a6a3f' : '#a4c47a', 8); } }
       } else P.moving = false;
       // ---- interact ----
       if (press('interact')) interact();
