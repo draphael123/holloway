@@ -22,3 +22,10 @@ CAVE FLOOR AND CAVE PLANTS (tiles/gb_cave.png)
 
 HERO AND VILLAGER SPRITES (tiles/character.png, recoloured)
   "Zelda-like tilesets and sprites" by ArMM1998 — https://opengameart.org/content/zelda-like-tilesets-and-sprites — CC0
+
+PEOPLE (tiles/people/*.png: the hero, Warden Hesk, Mother Pell, the pedlar)
+  "24x32 Characters with Faces (big pack)" by Svetlana Kushnariova (Cabbit) — https://opengameart.org/content/24x32-characters-with-faces-big-pack — CC-BY 3.0 / OGA-BY 3.0
+  Attribution required and given in-game (Settings): "Characters by Svetlana Kushnariova (lana-chan@yandex.ru) — CC-BY 3.0". The hero's tunic is tinted in code.
+
+MUSIC (audio/drowned.mp3, the mere)
+  "Crystal Cave (song18)" by cynicmusic (Alex Smith, pixelsphere.org / The Cynic Project) — https://opengameart.org/content/crystal-cave-song18 — CC0; credit given as a courtesy.

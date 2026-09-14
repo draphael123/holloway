@@ -19,6 +19,13 @@
 - Every screen auto-dressed to a density target at parse time; `node tools/quality.mjs` prints props per 100 tiles per room.
 - The wood has a two-row cliff along the top with the warren mouth cut into it.
 
+## Done from the third note
+- Hero and villagers: Svetlana Kushnariova's painted 24x32 people (CC-BY 3.0), two tiles tall. No swing frames in that set, so the sword is still an overlay; drawing swing frames for it is the next art job.
+- The roll is a STEP: a short hop the way you press, or straight back when standing still. Untouchable for its length.
+- Fewer goblins per room, longer gaps between their wind-ups, and every blow shows the weapon.
+- Cave music in the warren (it had been playing the wood's theme) and a crystal-cave loop in the mere.
+- Denser dungeon dressing: stalactites, rubble, glowing crystals, moss, puddles, crates.
+
 ## Known and open (round 2)
 - The bot beats the warren; in the mere it reaches the pike but does not kill it inside its budget (it never
   wades in after it, so it waits for surges and snaps). A person will not have that problem, but the pike's

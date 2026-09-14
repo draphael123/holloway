@@ -5,6 +5,7 @@ import * as DA from './dungeon_art.js';
 import * as CH from './chars.js';
 import * as GB from './goblins.js';
 import { T as TSET, OVER, CAVE, loadTileset, bakePerson } from './tileset.js';
+import { PEOPLE, loadPeople, bakePerson24 } from './people.js';
 import { text, textW, wrap, fitText } from './font.js';
 import { AREAS, parseArea, roomDoors, K, SOLID, DIGGABLE, SWIMMABLE, GRASSY, CELL_W, CELL_H } from './world.js';
 import { boot as audioBoot, sfx, settings as AUD, apply as audioApply, playMusic, stopMusic } from './audio.js';
@@ -63,7 +64,7 @@ function pollPad() {
   for (const c of padDown) if (!now.has(c)) keys.delete(c);
   padDown.clear(); for (const c of now) padDown.add(c);
 }
-const MUSIC = { theme: 'audio/theme.ogg', dark: 'audio/descent.ogg', drowned: 'audio/drowned.ogg' };
+const MUSIC = { theme: 'audio/theme.ogg', dark: 'audio/descent.ogg', drowned: 'audio/drowned.mp3' };
 const musicName = () => (area && MUSIC[area.def.music]) ? area.def.music : 'theme';
 const musicUrl = () => MUSIC[musicName()];
 const held = k => KEYS[k].some(c => keys.has(c));
@@ -271,7 +272,7 @@ function load(areaId, at = 'start') {
       case 'mouth': mouthAt = { x: e.x, y: e.y }; if (at === 'mouth' && !start) start = { x: e.x * TS + 16, y: (e.y + 2) * TS + 4 }; break;
       case 'culvert': if (!culvertAt) { culvertAt = { x: e.x, y: e.y }; if (at === 'culvert' && !start) start = { x: e.x * TS + 16, y: e.y * TS - 4 }; } break;
       case 'deco': { const sx = (e.x * 7 + e.y * 3); let spr = e.sub === 'mushroom' ? SPR.mushrooms[sx % 3] : e.sub === 'roots' ? SPR.roots[sx % 2] : e.sub === 'tallgrass' ? SPR.tallgrass[sx % 3] : null; let sub = e.sub; if (TSET.ready && def.kind === 'holloway' && e.sub === 'roots') { sub = sx % 3 === 0 ? 'crystal' : 'plant'; spr = sub === 'crystal' ? SPR.crystalGB[sx % 4] : SPR.plantGB[sx % 2]; } props.push({ kind: sub, x: cx, y: cy - 2, spr, flat: sub === 'puddle', anim: sub === 'puddle' }); break; }
-      case 'npc': npcs.push({ x: cx, y: cy - 2, def: e.def, frames: TSET.ready ? bakePerson(e.def.look) : CH.bakeCharacter(e.def.look), facing: 'down', walk: 0, moving: false, homeX: cx, homeY: cy - 2, wait: 1 + rnd() * 2, tx: cx, ty: cy - 2 }); break;
+      case 'npc': npcs.push({ x: cx, y: cy - 2, def: e.def, frames: PEOPLE.ready && e.def.sheet ? bakePerson24(e.def.sheet) : TSET.ready ? bakePerson(e.def.look) : CH.bakeCharacter(e.def.look), facing: 'down', walk: 0, moving: false, homeX: cx, homeY: cy - 2, wait: 1 + rnd() * 2, tx: cx, ty: cy - 2 }); break;
     }
   }
   // tile-anchored props
@@ -980,8 +981,8 @@ function drawHero(ox, oy) {
       if (P.thrust) a = ang; else if (P.heavy) a = ang + (k < 0.3 ? -1.4 : (k - 0.3) / 0.7 * 2.8 - 1.4); else { const dir = P.combo === 1 ? -1 : 1; a = ang + dir * (-1.3 + Math.min(1, k / 0.6) * 2.6); }
       const i = ((Math.round(a / (Math.PI / 8)) % 16) + 16) % 16; const s = SPR.swords[i];
       const ex = P.thrust ? Math.cos(ang) * (2 + k * 8) : 0, ey = P.thrust ? Math.sin(ang) * (2 + k * 8) : 0;
-      g.drawImage(s.canvas, Math.round(sx + Math.cos(a) * 3 + ex - s.ax), Math.round(sy - 10 + Math.sin(a) * 3 + ey - s.ay));
-    } else if (P.charging) { const a = ang - 2.2; const i = ((Math.round(a / (Math.PI / 8)) % 16) + 16) % 16; const s = SPR.swords[i]; const sh = Math.sin(time * 40) * (P.chargeT > 0.6 ? 1 : 0); g.drawImage(s.canvas, Math.round(sx + Math.cos(a) * 3 - s.ax + sh), Math.round(sy - 10 + Math.sin(a) * 3 - s.ay)); if (P.chargeT > 0.6 && Math.floor(time * 20) % 2) { g.globalAlpha = 0.6; g.drawImage(CH.silhouette(s.canvas, '#ffd36b'), Math.round(sx + Math.cos(a) * 3 - s.ax + sh), Math.round(sy - 10 + Math.sin(a) * 3 - s.ay)); g.globalAlpha = 1; } }
+      g.drawImage(s.canvas, Math.round(sx + Math.cos(a) * 4 + ex - s.ax), Math.round(sy - 14 + Math.sin(a) * 4 + ey - s.ay));
+    } else if (P.charging) { const a = ang - 2.2; const i = ((Math.round(a / (Math.PI / 8)) % 16) + 16) % 16; const s = SPR.swords[i]; const sh = Math.sin(time * 40) * (P.chargeT > 0.6 ? 1 : 0); g.drawImage(s.canvas, Math.round(sx + Math.cos(a) * 4 - s.ax + sh), Math.round(sy - 14 + Math.sin(a) * 4 - s.ay)); if (P.chargeT > 0.6 && Math.floor(time * 20) % 2) { g.globalAlpha = 0.6; g.drawImage(CH.silhouette(s.canvas, '#ffd36b'), Math.round(sx + Math.cos(a) * 4 - s.ax + sh), Math.round(sy - 14 + Math.sin(a) * 4 - s.ay)); g.globalAlpha = 1; } }
     else if (P.dig > 0) { g.drawImage(SPR.claw, Math.round(sx + Math.cos(ang) * 8 - 6), Math.round(sy - 12 + Math.sin(ang) * 4 + Math.sin(time * 30) * 2)); }
   };
   if (behind) drawSword();
@@ -993,7 +994,7 @@ function drawHero(ox, oy) {
     if (P.stagger > 0) fx.push({ kind: 'star', x: sx - ox + (Math.random() - 0.5) * 12, y: sy - oy - 28, t: 0.01 });
   }
   if (!behind) drawSword();
-  if ((P.guard || P.parryT > 0) && P.roll <= 0) { const s = SPR.shield; g.drawImage(s, Math.round(sx + Math.cos(ang) * 7 - 6), Math.round(sy - 12 + Math.sin(ang) * 5 - 6)); if (P.parryT > 0) { g.globalAlpha = 0.7; g.drawImage(CH.silhouette(s, '#ffd36b'), Math.round(sx + Math.cos(ang) * 7 - 6), Math.round(sy - 12 + Math.sin(ang) * 5 - 6)); g.globalAlpha = 1; } }
+  if ((P.guard || P.parryT > 0) && P.roll <= 0) { const s = SPR.shield; g.drawImage(s, Math.round(sx + Math.cos(ang) * 8 - 6), Math.round(sy - 15 + Math.sin(ang) * 5 - 6)); if (P.parryT > 0) { g.globalAlpha = 0.7; g.drawImage(CH.silhouette(s, '#ffd36b'), Math.round(sx + Math.cos(ang) * 7 - 6), Math.round(sy - 12 + Math.sin(ang) * 5 - 6)); g.globalAlpha = 1; } }
   g.globalAlpha = 1;
 }
 function render() {
@@ -1141,7 +1142,8 @@ function drawPause() {
   } else if (tab === 'SETTINGS') {
     const S = PROG.settings; const rows = [['SOUND', `${Math.round(S.sfx * 10)}`], ['MUSIC', `${Math.round(S.music * 10)}`], ['SCREEN SHAKE', S.shake === false ? 'OFF' : 'ON'], ['GUIDED START', S.help === false ? 'OFF' : 'ON'], ['ERASE THE SAVE', menu.confirm ? 'Z AGAIN TO ERASE' : '']];
     rows.forEach(([k, v], i) => { const sel = menu.sel === i; text(g, (sel ? '> ' : '  ') + k, 22, y0 + i * 12, sel ? '#ffd36b' : '#f4f0e6'); text(g, v, 160, y0 + i * 12, i === 4 ? '#ff6a3a' : '#c9b9a0'); if (sel && i < 2) text(g, '< >', 200, y0 + i * 12, '#5a4a6a'); });
-    text(g, 'TILES: ARMM1998 (CC0), GEORGE BAILEY (CC-BY 4.0)', 22, BH - 38, '#5a4a6a');
+    text(g, 'TILES: ARMM1998 (CC0), GEORGE BAILEY (CC-BY 4.0)', 22, BH - 46, '#5a4a6a');
+    text(g, 'PEOPLE: SVETLANA KUSHNARIOVA (CC-BY 3.0)  MUSIC: CC0', 22, BH - 38, '#5a4a6a');
     text(g, 'ESC CLOSES', 22, BH - 30, '#5a4a6a');
     text(g, 'X CUT  HOLD X HEAVY  C GUARD  TAP C PARRY  Z STEP  SPACE TALK', 22, BH - 22, '#5a4a6a');
   }
@@ -1166,12 +1168,13 @@ function bootGame() {
     SPR.stal = [0, 1, 2].map(i => CAVE.rockGB(i)); SPR.mushrooms = [0, 1, 2].map(i => CAVE.mushroomGB(i)); SPR.plantGB = [0, 1].map(i => CAVE.plantGB(i)); SPR.crystalGB = [0, 1, 2, 3].map(i => CAVE.crystalGB(i));
     SPR.hero = bakePerson(CH.HERO_LOOK);
   }
+  if (PEOPLE.ready) SPR.hero = bakePerson24('hero', '#7a5a3a');
   if (loadSave()) applySettings();
   rafQueued = true; requestAnimationFrame(frame);
   setInterval(() => { if (performance.now() - lastTick > 250) tick(performance.now()); }, 125);
   const b = document.getElementById('boot'); if (b) b.remove();
 }
-loadTileset(bootGame); setTimeout(bootGame, 4000);
+let sheetsLeft = 2; const oneMore = () => { if (--sheetsLeft <= 0) bootGame(); }; loadTileset(oneMore); loadPeople(oneMore); setTimeout(bootGame, 5000);
 
 // debug / harness API
 window.HW = {
