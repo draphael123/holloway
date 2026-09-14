@@ -28,11 +28,46 @@ function tintGrey(c, hex) {
   g.putImageData(id, 0, 0); return c;
 }
 function feetOf(c) { const g = c.getContext('2d'); const d = g.getImageData(0, 0, c.width, c.height).data; for (let y = c.height - 1; y >= 0; y--) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3]) return y + 1; return c.height; }
-export function bakePerson24(sheet, tint) {
+export function bakePerson24(sheet, tint, withSwing = false) {
   const src = keyed(sheet); const out = {}; let feet = null;
   for (const f of ['down', 'up', 'left', 'right']) {
     const frames = [1, 0, 1, 2].map(col => { const [c, g] = canvas(24, 32); g.drawImage(src, col * 24, ROW[f] * 32, 24, 32, 0, 0, 24, 32); if (tint) tintGrey(c, tint); if (feet === null) feet = feetOf(c); return { canvas: c, ax: 12, ay: feet, bob: 0 }; });
     out[f] = frames;
+  }
+  if (withSwing) out.swing = bakeSwing(out, feet);
+  return out;
+}
+
+// ---- sword swings, drawn onto the standing body: wind-up, mid-arc, full extension, follow-through ----
+// The arm is a two-pixel line of skin from the shoulder to the hand; the blade runs on from the hand. Facing away,
+// the arm and blade go behind the body. Angles are screen-space degrees; the arc crosses the side the hero faces.
+const SHOULDER = { down: [16, 16], up: [8, 16], right: [15, 16], left: [9, 16] };
+const ARCS = { down: [-10, 45, 90, 140], up: [190, 235, 270, 320], right: [-80, -35, 0, 45], left: [260, 215, 180, 135] };
+const LEAN = { down: [0, 1], up: [0, -1], right: [1, 0], left: [-1, 0] };
+const SKIN = '#e8b98f', SKIN_D = '#b8845c', STEEL = '#d8dce6', STEEL_L = '#f7f9ff', GUARD = '#c9a227', GRIP = '#5a3a22';
+function drawArmAndBlade(g, sx, sy, deg, reach) {
+  const a = deg * Math.PI / 180; const hx = sx + Math.cos(a) * 6, hy = sy + Math.sin(a) * 6;
+  g.strokeStyle = SKIN; g.lineWidth = 2; g.beginPath(); g.moveTo(sx, sy); g.lineTo(hx, hy); g.stroke();
+  g.fillStyle = SKIN_D; g.fillRect(Math.round(hx) - 1, Math.round(hy) - 1, 2, 2);
+  const gx = hx + Math.cos(a) * 2, gy = hy + Math.sin(a) * 2; const px_ = -Math.sin(a), py_ = Math.cos(a);
+  g.strokeStyle = GRIP; g.beginPath(); g.moveTo(hx - Math.cos(a) * 2, hy - Math.sin(a) * 2); g.lineTo(gx, gy); g.stroke();
+  g.strokeStyle = GUARD; g.beginPath(); g.moveTo(gx + px_ * 3, gy + py_ * 3); g.lineTo(gx - px_ * 3, gy - py_ * 3); g.stroke();
+  g.strokeStyle = STEEL; g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx + Math.cos(a) * reach, gy + Math.sin(a) * reach); g.stroke();
+  g.strokeStyle = STEEL_L; g.lineWidth = 1; g.beginPath(); g.moveTo(gx + Math.cos(a) * 2 - px_ * 0.5, gy + Math.sin(a) * 2 - py_ * 0.5); g.lineTo(gx + Math.cos(a) * (reach - 2) - px_ * 0.5, gy + Math.sin(a) * (reach - 2) - py_ * 0.5); g.stroke();
+  g.fillStyle = STEEL_L; g.fillRect(Math.round(gx + Math.cos(a) * reach), Math.round(gy + Math.sin(a) * reach), 1, 1);
+}
+function bakeSwing(walk, feet) {
+  const out = {};
+  for (const f of ['down', 'up', 'left', 'right']) {
+    const body = walk[f][0].canvas; const [lx, ly] = LEAN[f];
+    out[f] = ARCS[f].map((deg, i) => {
+      const [c, g] = canvas(48, 48); g.imageSmoothingEnabled = false;
+      const bx = 12 + lx * (i === 0 ? -1 : i === 3 ? 2 : 1), by = 8 + ly * (i === 0 ? -1 : 1);
+      const sx = bx + SHOULDER[f][0], sy = by + SHOULDER[f][1]; const reach = i === 2 ? 15 : 13;
+      const behind = f === 'up' || (f === 'down' && i === 0);
+      if (behind) { drawArmAndBlade(g, sx, sy, deg, reach); g.drawImage(body, bx, by); } else { g.drawImage(body, bx, by); drawArmAndBlade(g, sx, sy, deg, reach); }
+      return { canvas: c, ax: 24, ay: feet + 8, bob: 0 };
+    });
   }
   return out;
 }

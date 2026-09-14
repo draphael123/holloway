@@ -967,7 +967,7 @@ function drawEnemy(e, ox, oy) {
 function drawHero(ox, oy) {
   const set = SPR.hero[P.facing]; const phase = Math.floor(P.walk * 2) % 4; let fr = P.moving ? set[phase] : set[0];
   const swingSet = SPR.hero.swing && SPR.hero.swing[P.facing];
-  if (swingSet && (P.atk > 0 || P.charging)) { const k = P.atk > 0 ? 1 - P.atk / P.atkDur : 0; fr = swingSet[P.charging ? 0 : P.thrust ? 3 : Math.min(3, Math.floor(k * 4))]; }
+  if (swingSet && (P.atk > 0 || P.charging)) { const k = P.atk > 0 ? 1 - P.atk / P.atkDur : 0; const i = Math.min(3, Math.floor(k * 4)); fr = swingSet[P.charging ? 0 : P.thrust ? (k < 0.3 ? 1 : 2) : P.combo === 1 ? 3 - i : i]; }
   const sx = ox + Math.round(P.x), sy = oy + Math.round(P.y);
   if (P.swim) { const rp = SPR.ripple[Math.floor(time * 4) % 3]; g.drawImage(rp.canvas, sx - rp.ax, sy - rp.ay - 1); } else g.drawImage(SPR.shadow, sx - 7, sy - 3);
   if (P.inv > 0 && !P.dead && Math.floor(time * 24) % 2 === 0 && P.roll <= 0) g.globalAlpha = 0.45;
@@ -1168,7 +1168,7 @@ function bootGame() {
     SPR.stal = [0, 1, 2].map(i => CAVE.rockGB(i)); SPR.mushrooms = [0, 1, 2].map(i => CAVE.mushroomGB(i)); SPR.plantGB = [0, 1].map(i => CAVE.plantGB(i)); SPR.crystalGB = [0, 1, 2, 3].map(i => CAVE.crystalGB(i));
     SPR.hero = bakePerson(CH.HERO_LOOK);
   }
-  if (PEOPLE.ready) SPR.hero = bakePerson24('hero', '#7a5a3a');
+  if (PEOPLE.ready) SPR.hero = bakePerson24('hero', '#7a5a3a', true);
   if (loadSave()) applySettings();
   rafQueued = true; requestAnimationFrame(frame);
   setInterval(() => { if (performance.now() - lastTick > 250) tick(performance.now()); }, 125);
