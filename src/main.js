@@ -714,7 +714,7 @@ const TUT = [
   { id: 'walk', text: 'WALK with the ARROWS or WASD.', done: () => P.moving && P.walk > 2 },
   { id: 'cut', text: 'Press X to CUT. Three presses is a run: the third is a thrust.', done: () => P.combo === 2 && P.atk > 0 },
   { id: 'heavy', text: 'HOLD X and let go for THE HEAVY BLOW. It breaks a shield.', done: () => P.heavy && P.atk > 0 },
-  { id: 'guard', text: 'HOLD C to GUARD. Front only. It costs stamina, the green bar.', done: () => P.guard && P.cT > 0.5 },
+  { id: 'guard', text: 'HOLD C to GUARD. Front only. It costs stamina, the green bar.', done: () => P.guard && P.cT > 0.3 },
   { id: 'parry', text: 'TAP C as a blow lands to PARRY it. Try it on an imp.', done: () => tut.parried },
   { id: 'roll', text: 'Press Z to ROLL. You cannot be hurt in the middle of it.', done: () => P.roll > 0 },
   { id: 'talk', text: 'Talk to WARDEN HESK with SPACE. Then go north to the warren.', done: () => tut.talked },
