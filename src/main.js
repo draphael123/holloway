@@ -59,12 +59,13 @@ function pollPad() {
   for (const i in PAD_BTN) { const b = pad.buttons[i]; if (b && (b.pressed || b.value > 0.5)) now.add(PAD_BTN[i]); }
   const ax = pad.axes[0] || 0, ay = pad.axes[1] || 0;
   if (ax < -0.45) now.add('PadLeft'); if (ax > 0.45) now.add('PadRight'); if (ay < -0.45) now.add('PadUp'); if (ay > 0.45) now.add('PadDown');
-  for (const c of now) if (!padDown.has(c)) { keys.add(c); pressed.add(c); if (!padSeen) { padSeen = true; audioBoot(); playMusic(musicUrl(), musicName()); toast('PAD: A ROLLS  X CUTS  B GUARDS  Y TALKS', 3, '#9ad0ff'); } }
+  for (const c of now) if (!padDown.has(c)) { keys.add(c); pressed.add(c); if (!padSeen) { padSeen = true; audioBoot(); playMusic(musicUrl(), musicName()); toast('PAD: A STEPS  X CUTS  B GUARDS  Y TALKS', 3, '#9ad0ff'); } }
   for (const c of padDown) if (!now.has(c)) keys.delete(c);
   padDown.clear(); for (const c of now) padDown.add(c);
 }
-const musicUrl = () => (area && area.def.music === 'dark') ? 'audio/descent.ogg' : 'audio/theme.ogg';
-const musicName = () => (area && area.def.music === 'dark') ? 'dark' : 'theme';
+const MUSIC = { theme: 'audio/theme.ogg', dark: 'audio/descent.ogg', drowned: 'audio/drowned.ogg' };
+const musicName = () => (area && MUSIC[area.def.music]) ? area.def.music : 'theme';
+const musicUrl = () => MUSIC[musicName()];
 const held = k => KEYS[k].some(c => keys.has(c));
 const press = k => KEYS[k].some(c => pressed.has(c));
 addEventListener('keydown', e => {
@@ -120,16 +121,16 @@ const SKILLS = [
   { id: 'guard2', branch: 1, tier: 1, name: 'RIPOSTE', desc: 'After a parry the next blow does double.' },
   { id: 'guard3', branch: 1, tier: 2, name: 'STONEWALL', desc: 'The guard costs half and takes almost nothing.' },
   { id: 'foot1', branch: 2, tier: 0, name: 'QUICK FEET', desc: 'Walk a tenth faster.' },
-  { id: 'foot2', branch: 2, tier: 1, name: 'LONG ROLL', desc: 'The roll goes a third further.' },
+  { id: 'foot2', branch: 2, tier: 1, name: 'LONG STEP', desc: 'The step goes a third further.' },
   { id: 'foot3', branch: 2, tier: 2, name: 'SECOND WIND', desc: 'Stamina comes back half again as fast.' },
 ];
 const BRANCH = ['BLADE', 'GUARD', 'FOOT'];
 const CHARMS = {
   thornband: { name: 'THORNBAND', col: '#5a9a3a', desc: 'A ring of bramble. Every blow does a little more.' },
-  ratfoot: { name: 'RATFOOT', col: '#8a7562', desc: 'Dried and strung. The roll is cheap and quick.' },
+  ratfoot: { name: 'RATFOOT', col: '#8a7562', desc: 'Dried and strung. The step is cheap and quick.' },
   brockhide: { name: 'BROCKHIDE', col: '#7c7c8a', desc: 'A strip of striped hide. You take a fifth less.' },
   mothsilk: { name: 'MOTHSILK', col: '#e6dcc4', desc: 'Spun by something in the wood. Stamina comes back a third faster.' },
-  eelskin: { name: 'EELSKIN', col: '#4a7a68', desc: 'Slick and cold. You swim a third faster and the dive is cheap.' },
+  eelskin: { name: 'EELSKIN', col: '#4a7a68', desc: 'Slick and cold. You swim a third faster and the dive is nearly free.' },
   pikescale: { name: 'PIKESCALE', col: '#7a9a4a', desc: 'One armoured scale. THE HEAVY BLOW does a quarter more.' },
 };
 // the pedlar's table; `once` items sell one time per save
@@ -202,7 +203,7 @@ let god = false;
 
 const P = { x: 0, y: 0, facing: 'down', moving: false, walk: 0, hp: 60, maxHp: 60, st: 100, maxSt: 100, stDelay: 0,
   atk: 0, atkDur: 0, combo: 0, atkHit: null, swingEndT: -9, abuf: 0, hold: 0, charging: false, heavy: false, thrust: false,
-  guard: false, parryT: 0, cT: 0, riposte: 0, roll: 0, rollDur: 0.28, rdx: 0, rdy: 0, inv: 0, stagger: 0, flash: 0, dead: false,
+  guard: false, parryT: 0, cT: 0, riposte: 0, roll: 0, rollDur: 0.18, rdx: 0, rdy: 0, inv: 0, stagger: 0, flash: 0, dead: false,
   dig: 0, digTile: null, lvl: 1, xp: 0, pts: 0, might: 0, gold: 0, keys: 0, skills: {}, charms: [], equipped: [null, null], abilities: {}, keepings: 0,
   lastSafe: { x: 0, y: 0 }, push: { x: 0, y: 0 }, lastHurtBy: '', idleT: 0, stepT: 0, softHint: 0 };
 
@@ -344,8 +345,8 @@ const speedMul = () => (has('foot1') ? 1.1 : 1);
 const reach = () => 22 + (has('blade1') ? 6 : 0);
 const arcHalf = () => (has('blade3') ? 1.5 : 1.05);
 const parryWin = () => (has('guard1') ? 0.28 : 0.18);
-const rollDist = () => 58 * (has('foot2') ? 1.35 : 1);
-const rollCost = () => (wearing('ratfoot') ? 20 : 32);
+const rollDist = () => 30 * (has('foot2') ? 1.35 : 1);
+const rollCost = () => (wearing('ratfoot') ? 14 : 22);
 function baseDmg() { return 10 * (1 + 0.07 * (P.lvl - 1) + 0.04 * P.might) * (wearing('thornband') ? 1.12 : 1); }
 function spend(n) { if (god) return true; if (P.st < n) return false; P.st -= n; P.stDelay = 0.7; return true; }
 function canAct() { return P.atk <= 0 && P.roll <= 0 && P.stagger <= 0 && P.dig <= 0 && !P.charging && !P.dead; }
@@ -364,10 +365,10 @@ function updatePlayer(dt) {
   const len = Math.hypot(mx, my); if (len) { mx /= len; my /= len; }
   // ---- roll ----
   if (P.roll > 0) {
-    P.roll -= dt; const k = 1 - P.roll / P.rollDur; const sp = rollDist() / P.rollDur * (1.6 - 1.2 * k);
+    P.roll -= dt; const sp = rollDist() / P.rollDur;
     moveBox(P, P.rdx * sp * dt, P.rdy * sp * dt, P_HW, P_HH, 'player');
-    if (Math.random() < 0.5) puff(P.x, P.y, 1, '#c9b9a0', 14);
-    P.moving = true; P.walk += dt * 3;
+    if (P.roll <= 0) { puff(P.x, P.y, 3, P.swim ? '#d6ecf8' : '#c9b9a0', 18); P.inv = Math.max(P.inv, 0.05); }
+    P.moving = false;
   } else if (P.dig > 0) {
     P.dig -= dt; if (Math.random() < 0.6) puff(P.digTile.x * TS + 8, P.digTile.y * TS + 10, 2, '#8a6a3f', 40);
     if (P.dig <= 0) finishDig();
@@ -397,7 +398,7 @@ function updatePlayer(dt) {
       if (P.guard) { P.stDelay = Math.max(P.stDelay, 0.2); }
       // ---- roll ----
       if (press('roll') && P.st >= rollCost() * (god ? 0 : 1)) {
-        if (spend(P.swim && wearing('eelskin') ? 6 : rollCost())) { P.roll = P.rollDur; const a = len ? Math.atan2(my, mx) : FACE_ANG[P.facing]; P.rdx = Math.cos(a); P.rdy = Math.sin(a); if (len) P.facing = faceOf(mx, my); P.guard = false; P.parryT = 0; sfx.roll(); puff(P.x, P.y, 5, '#c9b9a0', 30); }
+        if (spend(P.swim && wearing('eelskin') ? 6 : rollCost())) { P.roll = P.rollDur; const a = len ? Math.atan2(my, mx) : FACE_ANG[P.facing] + Math.PI; P.rdx = Math.cos(a); P.rdy = Math.sin(a); P.guard = false; P.parryT = 0; sfx.roll(); puff(P.x, P.y, 5, '#c9b9a0', 30); }
       } else if (len) {
         const sp = 72 * speedMul() * (P.guard ? 0.5 : 1) * (P.swim ? (wearing('eelskin') ? 0.75 : 0.55) : 1);
         const bx = P.x, by = P.y; moveBox(P, mx * sp * dt, my * sp * dt, P_HW, P_HH, 'player');
@@ -522,7 +523,7 @@ function fallInPit() { sfx.fall(); hurtPlayerRaw(6, 'THE PIT'); P.x = P.lastSafe
 // every enemy attack comes through here: roll, parry, guard, then damage
 function hitPlayer(src, dmg, fromX, fromY, pushN = 120, kind = 'melee') {
   if (P.dead) return false;
-  if (P.roll > 0 && P.roll < P.rollDur - 0.04 && P.roll > 0.06) { floater(P.x, P.y - 26, 'ROLLED', '#c9b9a0'); return false; }
+  if (P.roll > 0) { floater(P.x, P.y - 26, 'STEPPED', '#c9b9a0'); return false; }
   if (P.inv > 0) return false;
   const toSrc = Math.atan2(fromY - (P.y - 4), fromX - P.x); const frontal = Math.abs(angDiff(FACE_ANG[P.facing], toSrc)) < 1.6;
   if (P.parryT > 0 && frontal) {
@@ -590,7 +591,7 @@ function updateEnemies(dt) {
       continue;
     }
     // ---- chase & decide ----
-    const canTell = time - lastTellT > (e.def.big ? 0 : 0.35);
+    const canTell = time - lastTellT > (e.def.big ? 0 : 0.55);
     switch (e.def.ai || e.id) {
       case 'imp': if (d < 40 && e.cd.a <= 0 && canTell) tell(e, 'LUNGE', 0.4, 0); else if (d > 14) stepToward(e, P.x, P.y - 4, e.def.spd, dt); break;
       case 'drowned': if (d < 24 && e.cd.a <= 0 && canTell) tell(e, 'GRAB', 0.6, 3); else if (d > 14) stepToward(e, P.x, P.y - 4, e.def.spd, dt); else e.facing = faceOf(P.x - e.x, P.y - 4 - e.y); break;
@@ -620,6 +621,7 @@ function updateEnemies(dt) {
 }
 function startAttack(e) {
   const n = e.tellKind;
+  if (n === 'LUNGE' || n === 'BITE' || n === 'SHOVE' || n === 'GRAB') fx.push({ kind: 'slash', x: e.x, y: e.y - 6, ang: e.lockAng, t: 0.16, max: 0.16, dir: 1, r: n === 'SHOVE' ? 20 : 14, col: n === 'GRAB' ? '#8aa0a8' : '#d8dce6' });
   if (n === 'LUNGE') { e.cd.a = 1.6; sfx.lunge(); }
   else if (n === 'BITE') { e.cd.a = 1.0; sfx.bite(); }
   else if (n === 'DRAW') { e.cd.a = 2.2; sfx.arrow(); projectiles.push({ kind: 'stone', x: e.x, y: e.y - 10, vx: Math.cos(e.lockAng) * 150, vy: Math.sin(e.lockAng) * 150, dmg: e.def.dmg, life: 2, ang: e.lockAng, src: e }); e.state = 'recover'; e.t = 0.4; }
@@ -822,7 +824,7 @@ const TUT = [
   { id: 'heavy', text: 'HOLD X and let go for THE HEAVY BLOW. It breaks a shield.', done: () => P.heavy && P.atk > 0 },
   { id: 'guard', text: 'HOLD C to GUARD. Front only. It costs stamina, the green bar.', done: () => P.guard && P.cT > 0.3 },
   { id: 'parry', text: 'TAP C as a blow lands to PARRY it. Try it on a goblin.', done: () => tut.parried },
-  { id: 'roll', text: 'Press Z to ROLL. You cannot be hurt in the middle of it.', done: () => P.roll > 0 },
+  { id: 'roll', text: 'Press Z to STEP: a quick hop, backwards if you stand still. Nothing can touch you during it.', done: () => P.roll > 0 },
   { id: 'talk', text: 'Talk to WARDEN HESK with SPACE. Then go north to the warren.', done: () => tut.talked },
 ];
 function startTutorial() { tut = { i: 0, t: 0, parried: false, talked: false, hold: 0 }; }
@@ -935,7 +937,9 @@ function drawTiles(ox, oy) {
     }
     if (spr) g.drawImage(spr, sx, sy);
     if (TSET.ready && !holl && (k === K.WATER || k === K.CULVERT)) { const c = cont4(x, y, isWaterish); if (!(c & 1)) { g.fillStyle = '#d6ecf8'; g.fillRect(sx, sy, TS, 1); g.fillStyle = '#5d9be0'; for (let i = ((x * 3 + wf) % 4); i < TS; i += 4) g.fillRect(sx + i, sy + 1, 2, 1); } if (!(c & 4)) { g.fillStyle = '#d6ecf8'; g.fillRect(sx, sy + TS - 1, TS, 1); } }
-    if (holl && k !== K.WALL && tileAt(x, y - 1) === K.WALL) { g.fillStyle = 'rgba(8,6,16,0.32)'; g.fillRect(sx, sy, TS, 4); g.fillStyle = 'rgba(8,6,16,0.14)'; g.fillRect(sx, sy + 4, TS, 3); }
+    if (holl && k !== K.WALL && tileAt(x, y - 1) === K.WALL) { g.fillStyle = 'rgba(8,6,16,0.32)'; g.fillRect(sx, sy, TS, 4); g.fillStyle = 'rgba(8,6,16,0.14)'; g.fillRect(sx, sy + 4, TS, 3);
+      const hh = (x * 31 + y * 17) % 7; if (hh < 3) { g.fillStyle = '#5f5468'; g.fillRect(sx + 2 + hh * 4, sy + 1, 3, 2); g.fillRect(sx + 9 - hh, sy + 2, 2, 2); g.fillStyle = '#3a3140'; g.fillRect(sx + 3 + hh * 4, sy + 2, 1, 1); } }
+    if (holl && k === K.WALL && tileAt(x, y + 1) !== K.WALL) { const hh = (x * 13 + y * 29) % 5; if (hh < 2) { const sxx = sx + 3 + hh * 7; g.fillStyle = '#2b2430'; g.fillRect(sxx, sy, 3, 6 + hh); g.fillRect(sxx + 1, sy + 6 + hh, 1, 3); g.fillStyle = '#4a4052'; g.fillRect(sxx, sy, 1, 5); } }
     if (holl && k !== K.WALL && tileAt(x - 1, y) === K.WALL) { g.fillStyle = 'rgba(8,6,16,0.16)'; g.fillRect(sx, sy, 3, TS); }
     if (stairsAt && stairsAt.x === x && stairsAt.y === y && PROG.cleared[`${area.id}:${stairsAt.room}`]) g.drawImage(SPR.stairs, sx, sy);
   }
@@ -981,7 +985,7 @@ function drawHero(ox, oy) {
     else if (P.dig > 0) { g.drawImage(SPR.claw, Math.round(sx + Math.cos(ang) * 8 - 6), Math.round(sy - 12 + Math.sin(ang) * 4 + Math.sin(time * 30) * 2)); }
   };
   if (behind) drawSword();
-  if (P.roll > 0) { const k = 1 - P.roll / P.rollDur; g.save(); g.translate(sx, sy - 10); g.rotate(k * TAU * (P.rdx < 0 ? -1 : 1) * (Math.abs(P.rdx) > 0.3 ? 1 : 0.6)); g.drawImage(fr.canvas, -fr.ax, -fr.ay + 10); g.restore(); }
+  if (P.roll > 0) { const k = 1 - P.roll / P.rollDur; const hop = Math.round(Math.sin(k * Math.PI) * 5); g.drawImage(fr.canvas, sx - fr.ax, sy - fr.ay + 1 - hop); }
   else if (P.dead) { g.save(); g.translate(sx, sy); g.rotate(Math.min(1, deadT) * Math.PI / 2); g.drawImage(fr.canvas, -fr.ax, -fr.ay); g.restore(); }
   else {
     g.drawImage(fr.canvas, sx - fr.ax, sy - fr.ay - (P.moving && fr.bob ? 1 : 0) + 1);
@@ -1026,12 +1030,13 @@ function render() {
     else if (f.kind === 'smoke') { const k = 1 - f.t / f.max; g.globalAlpha = 0.5 * (1 - k); g.fillStyle = '#d8d3c8'; const r = 1 + Math.round(k * 4); g.fillRect(ox + Math.round(f.x) - r / 2, oy + Math.round(f.y) - r / 2, r, r); g.globalAlpha = 1; }
     else if (f.kind === 'star') { g.fillStyle = '#ffd36b'; g.fillRect(ox + Math.round(f.x), oy + Math.round(f.y), 2, 2); g.fillRect(ox + Math.round(f.x) - 1, oy + Math.round(f.y) + 1, 4, 1); }
     else if (f.kind === 'ring') { const k = 1 - f.t / f.max; g.strokeStyle = f.col; g.globalAlpha = 1 - k; g.lineWidth = 1; g.beginPath(); g.ellipse(ox + f.x, oy + f.y, f.r * k + 2, (f.r * k + 2) * 0.6, 0, 0, TAU); g.stroke(); g.globalAlpha = 1; }
-    else if (f.kind === 'slash') { const k = 1 - f.t / f.max; g.strokeStyle = f.heavy ? '#ffd36b' : '#f4f0e6'; g.globalAlpha = 0.85 * (1 - k); g.lineWidth = f.heavy ? 3 : 2; g.beginPath(); if (f.thrust) { g.moveTo(ox + f.x + Math.cos(f.ang) * 8, oy + f.y + Math.sin(f.ang) * 8); g.lineTo(ox + f.x + Math.cos(f.ang) * (f.r + 6), oy + f.y + Math.sin(f.ang) * (f.r + 6)); } else { const a0 = f.ang - 1.2 * f.dir, a1 = f.ang - 1.2 * f.dir + 2.4 * f.dir * Math.min(1, k * 1.6); g.ellipse(ox + f.x, oy + f.y, f.r, f.r * 0.75, 0, Math.min(a0, a1), Math.max(a0, a1)); } g.stroke(); g.globalAlpha = 1; }
+    else if (f.kind === 'slash') { const k = 1 - f.t / f.max; g.strokeStyle = f.col || (f.heavy ? '#ffd36b' : '#f4f0e6'); g.globalAlpha = 0.85 * (1 - k); g.lineWidth = f.heavy ? 3 : 2; g.beginPath(); if (f.thrust) { g.moveTo(ox + f.x + Math.cos(f.ang) * 8, oy + f.y + Math.sin(f.ang) * 8); g.lineTo(ox + f.x + Math.cos(f.ang) * (f.r + 6), oy + f.y + Math.sin(f.ang) * (f.r + 6)); } else { const a0 = f.ang - 1.2 * f.dir, a1 = f.ang - 1.2 * f.dir + 2.4 * f.dir * Math.min(1, k * 1.6); g.ellipse(ox + f.x, oy + f.y, f.r, f.r * 0.75, 0, Math.min(a0, a1), Math.max(a0, a1)); } g.stroke(); g.globalAlpha = 1; }
   }
   // darkness and firelight in a holloway
   if (area.def.kind === 'holloway') {
     g.fillStyle = area.def.tint || 'rgba(8,6,16,0.28)'; g.fillRect(0, 0, BW, BH); if (area.def.tint) { g.fillStyle = 'rgba(8,6,16,0.16)'; g.fillRect(0, 0, BW, BH); }
     g.globalCompositeOperation = 'lighter';
+    for (const p of props) if (p.kind === 'crystal') { const cx = ox + p.x, cy = oy + p.y - 8; const r = 22 + Math.sin(time * 3 + p.x) * 3; const gr = g.createRadialGradient(cx, cy, 1, cx, cy, r); gr.addColorStop(0, 'rgba(120,220,255,0.28)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(cx - r, cy - r, r * 2, r * 2); }
     for (const p of props) if (p.kind === 'brazier') { const cx = ox + p.x, cy = oy + p.y - 14; const r = 40 + Math.sin(time * 9 + p.x) * 3; const gr = g.createRadialGradient(cx, cy, 2, cx, cy, r); gr.addColorStop(0, 'rgba(255,170,70,0.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(cx - r, cy - r, r * 2, r * 2); }
     g.globalCompositeOperation = 'source-over';
   }
@@ -1138,7 +1143,7 @@ function drawPause() {
     rows.forEach(([k, v], i) => { const sel = menu.sel === i; text(g, (sel ? '> ' : '  ') + k, 22, y0 + i * 12, sel ? '#ffd36b' : '#f4f0e6'); text(g, v, 160, y0 + i * 12, i === 4 ? '#ff6a3a' : '#c9b9a0'); if (sel && i < 2) text(g, '< >', 200, y0 + i * 12, '#5a4a6a'); });
     text(g, 'TILES: ARMM1998 (CC0), GEORGE BAILEY (CC-BY 4.0)', 22, BH - 38, '#5a4a6a');
     text(g, 'ESC CLOSES', 22, BH - 30, '#5a4a6a');
-    text(g, 'X CUT  HOLD X HEAVY  C GUARD  TAP C PARRY  Z ROLL  SPACE TALK', 22, BH - 22, '#5a4a6a');
+    text(g, 'X CUT  HOLD X HEAVY  C GUARD  TAP C PARRY  Z STEP  SPACE TALK', 22, BH - 22, '#5a4a6a');
   }
 }
 function drawDead() { g.fillStyle = `rgba(20,4,8,${Math.min(0.7, deadT * 0.6)})`; g.fillRect(0, 0, BW, BH); if (deadT > 0.6) { text(g, 'THE WOOD KEEPS YOU', BW / 2, 70, '#ff6a3a', 2, 'c', '#1b1626'); text(g, `TAKEN BY ${P.lastHurtBy}`, BW / 2, 92, '#c9b9a0', 1, 'c'); if (deadT > 1.2 && Math.floor(time * 3) % 2 === 0) text(g, 'Z: BACK TO THE LAST SAFE PLACE', BW / 2, 112, '#f4f0e6', 1, 'c'); } }

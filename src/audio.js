@@ -96,7 +96,8 @@ export async function playMusic(url, name) {
   if (musicName === name && musicSrc) return;
   stopMusic(); musicName = name; const gen = ++musicGen;
   try {
-    const res = await fetch(url); const arr = await res.arrayBuffer(); const buf = await ctx.decodeAudioData(arr);
+    let res = await fetch(url); if (!res.ok) { res = await fetch('audio/descent.ogg'); } // a loop not yet on disk falls back to the cave loop
+    const arr = await res.arrayBuffer(); const buf = await ctx.decodeAudioData(arr);
     if (gen !== musicGen) return; musicBuf = buf;
     const start = (at) => { const s = ctx.createBufferSource(); s.buffer = buf; s.connect(musGain); s.start(at); musicSrc = s; const next = at + buf.duration; s.onended = () => {}; schedule(next, gen); };
     const schedule = (next, g) => { const wait = (next - ctx.currentTime - 0.6) * 1000; setTimeout(() => { if (g === musicGen) start(next); }, Math.max(0, wait)); };

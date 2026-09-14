@@ -42,7 +42,7 @@ const WARREN_ROOMS = {
     '#...................',
     '#.........w.........',
     '#......s...........#',
-    '#..r........t..t...#',
+    '#..r........t......#',
     '#..................#',
     '#.........s........#',
     '####################',
@@ -54,8 +54,8 @@ const WARREN_ROOMS = {
     '#.............t....#',
     '....b..........b....',
     '.........w..........',
-    '#..t...............#',
-    '#....i.......i.....#',
+    '#..................#',
+    '#....i.............#',
     '#.......r......s...#',
     '#..................#',
     '#########..#########',
@@ -166,7 +166,7 @@ const MERE_ROOMS = {
     '#..~~~~~~~..........',
     '#......~~..n........',
     '#......~~..........#',
-    '#..n...~~....d.....#',
+    '#......~~....d.....#',
     '#......~~..........#',
     '#......~~..........#',
     '####################',
@@ -178,7 +178,7 @@ const MERE_ROOMS = {
     '#.....~~~~~~.......#',
     '....d.~~~~~~...d....',
     '......~~~~~~........',
-    '#..n...~~~~...n....#',
+    '#......~~~~........#',
     '#..................#',
     '#..s...............#',
     '#..................#',
@@ -327,12 +327,12 @@ export const AREAS = {
       { idx: 3, name: 'THE PEDLAR', shop: true, look: { hair: '#2a2a2a', skin: '#c98a5a', tunic: '#e0bb65', pants: '#4b3d5c', boots: '#2a2a2a', accent: '#f7f2e6', hat: '#7a3a1a' },
         lines: ['PEDLAR: Gold from under the roots spends the same as any. What do you need?'], after: ['PEDLAR: The one who came back from the warren. Prices are the same, but I will not haggle with you.'], after2: ['PEDLAR: You have been to the mere. I can smell it. Buy something, it helps.'] },
     ],
-    signs: { S: ['ARROWS or WASD to walk. X cuts, hold X for THE HEAVY BLOW.', 'C guards. TAP C as a blow lands to PARRY. Z rolls.', 'SPACE talks and opens. TAB is your pack: skills, charms, the bestiary.'] },
+    signs: { S: ['ARROWS or WASD to walk. X cuts, hold X for THE HEAVY BLOW.', 'C guards. TAP C as a blow lands to PARRY. Z steps back, or the way you press.', 'SPACE talks and opens. TAB is your pack: skills, charms, the bestiary.'] },
     exits: { mouth: { to: 'warren', at: 'entry' }, culvert: { to: 'mere', at: 'entry' } },
     freeCamera: true,
   },
   warren: {
-    id: 'warren', name: 'THE WARREN', kind: 'holloway', music: 'warren',
+    id: 'warren', name: 'THE WARREN', kind: 'holloway', music: 'dark',
     grid: [['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']],
     rooms: WARREN_ROOMS, chests: WARREN_CHESTS, mounds: WARREN_MOUNDS, signs: WARREN_SIGNS,
     // the door out of H's south wall leads back to the wood, standing under the mouth
@@ -346,7 +346,7 @@ export const AREAS = {
     ],
   },
   mere: {
-    id: 'mere', name: 'THE MERE', kind: 'holloway', music: 'dark', tint: 'rgba(20,50,90,0.2)',
+    id: 'mere', name: 'THE MERE', kind: 'holloway', music: 'drowned', tint: 'rgba(20,50,90,0.2)',
     grid: [['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']],
     rooms: MERE_ROOMS, chests: MERE_CHESTS, mounds: MERE_MOUNDS, signs: {},
     exits: { 'H:s': { to: 'wood', at: 'culvert' } },
@@ -434,7 +434,7 @@ function dress(area) {
   for (const R of regions) {
     let walk = 0, have = 0; for (let y = R.y0; y < R.y1; y++) for (let x = R.x0; x < R.x1; x++) { const k = t(x, y); if (!SOLID.has(k) && k !== K.PIT) walk++; }
     for (const e of area.ents) if (e.kind !== 'enemy' && e.kind !== 'start' && e.kind !== 'dripspot' && e.x >= R.x0 && e.x < R.x1 && e.y >= R.y0 && e.y < R.y1) have++;
-    const want = Math.max(0, Math.round(walk * (holl ? 0.07 : 0.09)) - have);
+    const want = Math.max(0, Math.round(walk * (holl ? 0.12 : 0.09)) - have);
     let placed = 0, tries = 0;
     while (placed < want && tries++ < 4000) {
       const x = R.x0 + Math.floor(rnd() * (R.x1 - R.x0)), y = R.y0 + Math.floor(rnd() * (R.y1 - R.y0)); const key = x + ',' + y;

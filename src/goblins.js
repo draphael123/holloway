@@ -28,7 +28,7 @@ const SIDE_LEGS = [
 ];
 
 export const CUTTER = { skin: '#5a8a3a', rag: '#7a5230', weapon: 'dagger' };
-export const WHELP = { skin: '#8ab04a', rag: '#8a6a3a', weapon: 'none', small: true };
+export const WHELP = { skin: '#8ab04a', rag: '#8a6a3a', weapon: 'stick', small: true };
 export const SLINGER = { skin: '#6a7a3a', rag: '#4a4a5a', weapon: 'sling', hood: '#3a3a4a' };
 export const SHIELDBEARER = { skin: '#4a7a3a', rag: '#3a3a44', weapon: 'shield' };
 export const BOG = { skin: '#3a7a6a', rag: '#2a4a3a', weapon: 'spear' };
@@ -63,6 +63,7 @@ export function bakeGoblin(v) {
       // weapons in front
       const hx = f === 'side' ? ox + 13 : f === 'down' ? ox + 12 : ox + 3, hy = oy + 13;
       if (v.weapon === 'dagger' && f !== 'up') { const ext = fr === 3 ? 4 : fr === 2 ? -2 : 0; if (f === 'side') { line(g, hx, hy, hx + 5 + ext, hy - 1, STEEL, 2); px(g, hx + 5 + ext, hy - 2, STEEL); rect(g, hx - 1, hy - 1, 2, 3, WOOD); } else { line(g, hx, hy, hx + 2, hy + 5 + ext, STEEL, 2); rect(g, hx - 1, hy - 2, 3, 2, WOOD); } }
+      if (v.weapon === 'stick' && f !== 'up') { const ext = fr === 3 ? 4 : fr === 2 ? -2 : 0; if (f === 'side') { line(g, hx - 1, hy + 1, hx + 4 + ext, hy - 3, WOOD, 2); circle(g, hx + 4 + ext, hy - 3, 1.6, WOOD_L); } else { line(g, hx, hy - 1, hx + 1, hy + 4 + ext, WOOD, 2); circle(g, hx + 1, hy + 4 + ext, 1.6, WOOD_L); } }
       if (v.weapon === 'sling' && f !== 'up') { const sx = f === 'side' ? hx + 1 : hx; if (fr === 2) { line(g, sx, hy, sx + 5, hy - 8, WOOD_L, 1); circle(g, sx + 5, hy - 8, 1.6, STONE); } else if (fr === 3) { line(g, sx, hy, sx + 7, hy - 2, WOOD_L, 1); } else { line(g, sx, hy, sx + 2, hy + 5, WOOD_L, 1); circle(g, sx + 2, hy + 5, 1.6, STONE); } }
       if (v.weapon === 'shield' && f !== 'up') { if (f === 'side') drawShield(g, ox + 15 + (fr === 3 ? 2 : 0), base - 11, fr); else drawShield(g, ox + 3, base - 10, fr); const kx = f === 'side' ? ox + 2 : ox + 13, ky = fr === 2 ? base - 24 : fr === 3 ? base - 8 : base - 17; line(g, kx, ky + 6, kx + (fr === 3 ? 3 : 1), ky, WOOD, 2); circle(g, kx + (fr === 3 ? 3 : 1), ky, 2.2, shade(WOOD, -0.3)); }
       if (v.weapon === 'spear' && f !== 'up') { const ext = fr === 3 ? 6 : fr === 2 ? -3 : 0; if (f === 'side') { line(g, hx - 6, hy + 2, hx + 8 + ext, hy - 2, REED, 1); px(g, hx + 9 + ext, hy - 2, STEEL); px(g, hx + 9 + ext, hy - 3, STEEL_D); } else { line(g, hx, hy - 8, hx + 1, hy + 8 + ext, REED, 1); px(g, hx + 1, hy + 9 + ext, STEEL); } }

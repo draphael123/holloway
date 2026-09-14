@@ -40,7 +40,7 @@ Daniel's answer to "forty minutes in, what are you doing": all four of these, so
 
 - X attack: three-cut run, the third is a thrust. HOLD X for THE HEAVY BLOW (guard-breaking, stamina).
 - C: tap = PARRY (a window; a perfect parry staggers and refunds), hold = GUARD (front half, stamina per hit).
-- Z: ROLL in the movement direction, i-frames in the middle, stamina.
+- Z: STEP, a short hop the way you press, or back if you stand still; untouchable for its length; stamina.
 - Every enemy attack is TOLD: an amber rim pulse on the wind-up. One hue, one meaning, every creature.
   White means "you hit it". (BRACKEN's second-read rule.)
 - Damage from ATTACKS, not from touch. Touch pushes.
