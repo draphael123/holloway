@@ -4,7 +4,7 @@ import * as ART from './art.js';
 import * as DA from './dungeon_art.js';
 import * as CH from './chars.js';
 import * as GB from './goblins.js';
-import { T as TSET, OVER, CAVE, loadTileset } from './tileset.js';
+import { T as TSET, OVER, CAVE, loadTileset, bakePerson } from './tileset.js';
 import { text, textW, wrap, fitText } from './font.js';
 import { AREAS, parseArea, roomDoors, K, SOLID, DIGGABLE, SWIMMABLE, GRASSY, CELL_W, CELL_H } from './world.js';
 import { boot as audioBoot, sfx, settings as AUD, apply as audioApply, playMusic, stopMusic } from './audio.js';
@@ -269,8 +269,8 @@ function load(areaId, at = 'start') {
       case 'dripspot': drips.push({ x: cx, y: cy - 8, room: e.room }); break;
       case 'mouth': mouthAt = { x: e.x, y: e.y }; if (at === 'mouth' && !start) start = { x: e.x * TS + 16, y: (e.y + 2) * TS + 4 }; break;
       case 'culvert': if (!culvertAt) { culvertAt = { x: e.x, y: e.y }; if (at === 'culvert' && !start) start = { x: e.x * TS + 16, y: e.y * TS - 4 }; } break;
-      case 'deco': { const sx = (e.x * 7 + e.y * 3); const spr = e.sub === 'mushroom' ? SPR.mushrooms[sx % 3] : e.sub === 'roots' ? SPR.roots[sx % 2] : e.sub === 'tallgrass' ? SPR.tallgrass[sx % 3] : null; props.push({ kind: e.sub, x: cx, y: cy - 2, spr, flat: e.sub !== 'mushroom' && e.sub !== 'tallgrass', anim: e.sub === 'puddle' }); break; }
-      case 'npc': npcs.push({ x: cx, y: cy - 2, def: e.def, frames: CH.bakeCharacter(e.def.look), facing: 'down', walk: 0, moving: false, homeX: cx, homeY: cy - 2, wait: 1 + rnd() * 2, tx: cx, ty: cy - 2 }); break;
+      case 'deco': { const sx = (e.x * 7 + e.y * 3); let spr = e.sub === 'mushroom' ? SPR.mushrooms[sx % 3] : e.sub === 'roots' ? SPR.roots[sx % 2] : e.sub === 'tallgrass' ? SPR.tallgrass[sx % 3] : null; let sub = e.sub; if (TSET.ready && def.kind === 'holloway' && e.sub === 'roots') { sub = sx % 3 === 0 ? 'crystal' : 'plant'; spr = sub === 'crystal' ? SPR.crystalGB[sx % 4] : SPR.plantGB[sx % 2]; } props.push({ kind: sub, x: cx, y: cy - 2, spr, flat: sub === 'puddle', anim: sub === 'puddle' }); break; }
+      case 'npc': npcs.push({ x: cx, y: cy - 2, def: e.def, frames: TSET.ready ? bakePerson(e.def.look) : CH.bakeCharacter(e.def.look), facing: 'down', walk: 0, moving: false, homeX: cx, homeY: cy - 2, wait: 1 + rnd() * 2, tx: cx, ty: cy - 2 }); break;
     }
   }
   // tile-anchored props
@@ -894,7 +894,7 @@ function drawTiles(ox, oy) {
     if (TSET.ready) {
       const hash = (x * 73 + y * 151) % 11;
       if (holl) {
-        const floorTile = SPR.earth[(x * 3 + y * 5) & 3];
+        const floorTile = CAVE.floorGB(hash);
         switch (k) {
           case K.WALL: { const openS = !isWallish(tileAt(x, y + 1)); spr = openS ? (isWallish(tileAt(x, y - 1)) ? CAVE.wallFace() : CAVE.wallFaceBottom()) : CAVE.wallTop(); break; }
           case K.FLOOR: case K.ROCK: case K.BRAZIER: case K.STAL: case K.CRATE: spr = floorTile; break;
@@ -960,7 +960,9 @@ function drawEnemy(e, ox, oy) {
   else if (e.hp < e.maxHp && e.aggroed) { const w = 14; g.fillStyle = '#1b1626'; g.fillRect(sx - w / 2 - 1, sy - fr.canvas.height - 3, w + 2, 3); g.fillStyle = '#e0433a'; g.fillRect(sx - w / 2, sy - fr.canvas.height - 2, Math.round(w * e.hp / e.maxHp), 1); }
 }
 function drawHero(ox, oy) {
-  const set = SPR.hero[P.facing]; const phase = Math.floor(P.walk * 2) % 4; const fr = P.moving ? set[phase] : set[0];
+  const set = SPR.hero[P.facing]; const phase = Math.floor(P.walk * 2) % 4; let fr = P.moving ? set[phase] : set[0];
+  const swingSet = SPR.hero.swing && SPR.hero.swing[P.facing];
+  if (swingSet && (P.atk > 0 || P.charging)) { const k = P.atk > 0 ? 1 - P.atk / P.atkDur : 0; fr = swingSet[P.charging ? 0 : P.thrust ? 3 : Math.min(3, Math.floor(k * 4))]; }
   const sx = ox + Math.round(P.x), sy = oy + Math.round(P.y);
   if (P.swim) { const rp = SPR.ripple[Math.floor(time * 4) % 3]; g.drawImage(rp.canvas, sx - rp.ax, sy - rp.ay - 1); } else g.drawImage(SPR.shadow, sx - 7, sy - 3);
   if (P.inv > 0 && !P.dead && Math.floor(time * 24) % 2 === 0 && P.roll <= 0) g.globalAlpha = 0.45;
@@ -968,6 +970,7 @@ function drawHero(ox, oy) {
   const ang = FACE_ANG[P.facing];
   const behind = P.facing === 'up';
   const drawSword = () => {
+    if (swingSet && (P.atk > 0 || P.charging)) { if (P.charging && P.chargeT > 0.6 && Math.floor(time * 20) % 2) { g.globalAlpha = 0.5; g.drawImage(CH.silhouette(fr.canvas, '#ffd36b'), sx - fr.ax, sy - fr.ay + 1); g.globalAlpha = 1; } return; }
     if (P.atk > 0) {
       const k = 1 - P.atk / P.atkDur; let a;
       if (P.thrust) a = ang; else if (P.heavy) a = ang + (k < 0.3 ? -1.4 : (k - 0.3) / 0.7 * 2.8 - 1.4); else { const dir = P.combo === 1 ? -1 : 1; a = ang + dir * (-1.3 + Math.min(1, k / 0.6) * 2.6); }
@@ -1133,6 +1136,7 @@ function drawPause() {
   } else if (tab === 'SETTINGS') {
     const S = PROG.settings; const rows = [['SOUND', `${Math.round(S.sfx * 10)}`], ['MUSIC', `${Math.round(S.music * 10)}`], ['SCREEN SHAKE', S.shake === false ? 'OFF' : 'ON'], ['GUIDED START', S.help === false ? 'OFF' : 'ON'], ['ERASE THE SAVE', menu.confirm ? 'Z AGAIN TO ERASE' : '']];
     rows.forEach(([k, v], i) => { const sel = menu.sel === i; text(g, (sel ? '> ' : '  ') + k, 22, y0 + i * 12, sel ? '#ffd36b' : '#f4f0e6'); text(g, v, 160, y0 + i * 12, i === 4 ? '#ff6a3a' : '#c9b9a0'); if (sel && i < 2) text(g, '< >', 200, y0 + i * 12, '#5a4a6a'); });
+    text(g, 'TILES: ARMM1998 (CC0), GEORGE BAILEY (CC-BY 4.0)', 22, BH - 38, '#5a4a6a');
     text(g, 'ESC CLOSES', 22, BH - 30, '#5a4a6a');
     text(g, 'X CUT  HOLD X HEAVY  C GUARD  TAP C PARRY  Z ROLL  SPACE TALK', 22, BH - 22, '#5a4a6a');
   }
@@ -1148,15 +1152,21 @@ function tick(now) { lastTick = now; const dt = Math.max(0, Math.min(1 / 30, (no
 function frame(now) { rafQueued = false; tick(now); if (!rafQueued) { rafQueued = true; requestAnimationFrame(frame); } }
 
 bakeAll();
-loadTileset(() => {
-  SPR.trees = [0, 1, 2, 3, 4, 5].map(() => OVER.tree()); SPR.bush = [0, 1, 2].map(() => OVER.bush()); SPR.stump = [0, 1].map(() => OVER.stump());
-  SPR.rockWood = OVER.rock(); SPR.rockCave = CAVE.boulder(); SPR.fenceTile = OVER.fence(); SPR.houseTile = OVER.house(); SPR.mouthTile = OVER.mouth();
-  for (const p of props) { if (p.kind === 'tree') p.spr = SPR.trees[0]; else if (p.kind === 'bush') p.spr = SPR.bush[0]; else if (p.kind === 'stump') p.spr = SPR.stump[0]; else if (p.kind === 'fence') p.spr = SPR.fenceTile; else if (p.kind === 'rock') p.spr = area && area.def.kind === 'holloway' ? SPR.rockCave : SPR.rockWood; }
-});
-if (loadSave()) applySettings();
-rafQueued = true; requestAnimationFrame(frame);
-setInterval(() => { if (performance.now() - lastTick > 250) tick(performance.now()); }, 125);
-document.getElementById('boot').remove();
+let booted = false;
+function bootGame() {
+  if (booted) return; booted = true;
+  if (TSET.ready) {
+    SPR.trees = [0, 1, 2, 3, 4, 5].map(() => OVER.tree()); SPR.bush = [0, 1, 2].map(() => OVER.bush()); SPR.stump = [0, 1].map(() => OVER.stump());
+    SPR.rockWood = OVER.rock(); SPR.rockCave = CAVE.rockGB(0); SPR.fenceTile = OVER.fence(); SPR.houseTile = OVER.house(); SPR.mouthTile = OVER.mouth();
+    SPR.stal = [0, 1, 2].map(i => CAVE.rockGB(i)); SPR.mushrooms = [0, 1, 2].map(i => CAVE.mushroomGB(i)); SPR.plantGB = [0, 1].map(i => CAVE.plantGB(i)); SPR.crystalGB = [0, 1, 2, 3].map(i => CAVE.crystalGB(i));
+    SPR.hero = bakePerson(CH.HERO_LOOK);
+  }
+  if (loadSave()) applySettings();
+  rafQueued = true; requestAnimationFrame(frame);
+  setInterval(() => { if (performance.now() - lastTick > 250) tick(performance.now()); }, 125);
+  const b = document.getElementById('boot'); if (b) b.remove();
+}
+loadTileset(bootGame); setTimeout(bootGame, 4000);
 
 // debug / harness API
 window.HW = {
@@ -1169,4 +1179,4 @@ window.HW = {
   slay(e) { killEnemy(e); }, set god(v) { god = v; }, get god() { return god; }, give: giveItem, save, time: () => time, toast, xpNeed, get rocks() { return rocks; },
   bot(opts) { return import('./bot.js').then(m => m.runBot(window.HW, opts || {})); },
 };
-if (new URLSearchParams(location.search).get('bot')) { HW.newGame(); HW.bot().then(r => { window.__botRes = r; console.log('BOT', JSON.stringify(r, null, 1)); }); }
+if (new URLSearchParams(location.search).get('bot')) { const go = () => { if (!booted) { setTimeout(go, 100); return; } HW.newGame(); HW.bot().then(r => { window.__botRes = r; console.log('BOT', JSON.stringify(r, null, 1)); }); }; go(); }

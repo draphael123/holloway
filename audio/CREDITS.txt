@@ -15,3 +15,10 @@ SOUND EFFECTS (audio/sfx) — all CC0 1.0 (public domain dedication); credit giv
 
 TILESET (tiles/overworld.png, tiles/cave.png, tiles/objects.png)
   "Zelda-like tilesets and sprites" by ArMM1998 — https://opengameart.org/content/zelda-like-tilesets-and-sprites — CC0 (public domain); credit given as a courtesy.
+
+CAVE FLOOR AND CAVE PLANTS (tiles/gb_cave.png)
+  "16x16 Game Assets" by George Bailey — https://opengameart.org/content/16x16-game-assets — CC-BY 4.0
+  Attribution required and given in-game (Settings): "Tiles by George Bailey — https://opengameart.org/content/16x16-game-assets — CC-BY 4.0"
+
+HERO AND VILLAGER SPRITES (tiles/character.png, recoloured)
+  "Zelda-like tilesets and sprites" by ArMM1998 — https://opengameart.org/content/zelda-like-tilesets-and-sprites — CC0
